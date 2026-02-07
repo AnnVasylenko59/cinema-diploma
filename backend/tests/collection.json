@@ -1,0 +1,115 @@
+{
+	"info": {
+		"_postman_id": "237932f3-5290-4624-be09-e1840527d507",
+		"name": "Cinema API Tests",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "50609072"
+	},
+	"item": [
+		{
+			"name": "Get Movies List",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"pm.test(\"Response contains movies array\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    pm.expect(jsonData).to.have.property('movies');",
+							"    pm.expect(jsonData.movies).to.be.an('array');",
+							"});",
+							"",
+							"pm.test(\"Movies have required fields\", function () {",
+							"    var jsonData = pm.response.json();",
+							"    if (jsonData.movies.length > 0) {",
+							"        var movie = jsonData.movies[0];",
+							"        pm.expect(movie).to.have.property('title');",
+							"        pm.expect(movie).to.have.property('id');",
+							"    }",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://d98fcebc-759e-4ec7-9d48-6b8737d6a6f7.mock.pstmn.io/api/movies",
+					"protocol": "https",
+					"host": [
+						"d98fcebc-759e-4ec7-9d48-6b8737d6a6f7",
+						"mock",
+						"pstmn",
+						"io"
+					],
+					"path": [
+						"api",
+						"movies"
+					]
+				}
+			},
+			"response": [
+				{
+					"name": "Get Movies List",
+					"originalRequest": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "/api/movies",
+							"path": [
+								"api",
+								"movies"
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "",
+					"header": [],
+					"cookie": [
+						{
+							"expires": "Invalid Date",
+							"domain": "",
+							"path": ""
+						}
+					],
+					"body": "{\r\n    \"movies\": [\r\n        {\r\n            \"id\": 26,\r\n            \"title\": \"Трон: Арес\",\r\n            \"year\": 2025,\r\n            \"durationMin\": 180,\r\n            \"posterUrl\": \"https://cdn.planetakino.ua/23879_tron-ares-ov-en_2025/Media/Posters/vertical/opt_9527fc09-f2cc-4d1d-9168-c14ec31133a8.webp\",\r\n            \"trailerUrl\": \"https://www.youtube.com/watch?v=9KVG_X_7Naw\",\r\n            \"description\": \"Високоскладну програму під назвою «Арес» відправляють із цифрового світу в реальний для виконання небезпечної місії.\",\r\n            \"rating\": 9.1,\r\n            \"director\": \"Йоахім Реннінг\",\r\n            \"addedAt\": \"2025-10-03T12:02:06.059Z\",\r\n            \"genres\": [\r\n                {\r\n                    \"movieId\": 26,\r\n                    \"genreId\": 54,\r\n                    \"genre\": { \"id\": 54, \"name\": \"Бойовик\" }\r\n                },\r\n                {\r\n                    \"movieId\": 26,\r\n                    \"genreId\": 46,\r\n                    \"genre\": { \"id\": 46, \"name\": \"Пригоди\" }\r\n                },\r\n                {\r\n                    \"movieId\": 26,\r\n                    \"genreId\": 52,\r\n                    \"genre\": { \"id\": 52, \"name\": \"Фантастика\" }\r\n                }\r\n            ]\r\n        },\r\n        {\r\n            \"id\": 27,\r\n            \"title\": \"Месники: Династія Канга\",\r\n            \"year\": 2026,\r\n            \"durationMin\": 165,\r\n            \"posterUrl\": \"https://m.media-amazon.com/images/M/MV5BMDgxOTdjMzYtZGQxMS00ZTAzLWI4Y2UtMTQzN2VlYjYyZWRiXkEyXkFqcGdeQXVyMTkxNjUyNQ@@._V1_.jpg\",\r\n            \"trailerUrl\": \"https://www.youtube.com/watch?v=u3V5KDHRQvk\",\r\n            \"description\": \"Нові Месники об'єднуються проти могутньої династії Канга з різних вимірів.\",\r\n            \"rating\": 8.8,\r\n            \"director\": \"Дестин Деніел Креттон\",\r\n            \"addedAt\": \"2025-10-03T12:02:06.067Z\",\r\n            \"genres\": [\r\n                {\r\n                    \"movieId\": 27,\r\n                    \"genreId\": 52,\r\n                    \"genre\": { \"id\": 52, \"name\": \"Фантастика\" }\r\n                },\r\n                {\r\n                    \"movieId\": 27,\r\n                    \"genreId\": 54,\r\n                    \"genre\": { \"id\": 54, \"name\": \"Бойовик\" }\r\n                },\r\n                {\r\n                    \"movieId\": 27,\r\n                    \"genreId\": 46,\r\n                    \"genre\": { \"id\": 46, \"name\": \"Пригоди\" }\r\n                }\r\n            ]\r\n        }\r\n    ]\r\n}"
+				}
+			]
+		}
+	],
+	"event": [],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": ""
+		},
+		{
+			"key": "authToken",
+			"value": ""
+		}
+	]
+}

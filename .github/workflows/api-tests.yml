@@ -1,0 +1,21 @@
+name: Automated API Tests
+
+on: [push]
+
+jobs:
+  postman_tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Newman
+        run: npm install -g newman
+
+      - name: Create env.json from GitHub Secret
+        run: |
+          mkdir -p backend/tests
+          echo '${{ secrets.POSTMAN_ENV }}' > backend/tests/env.json
+
+      - name: Run Postman Collection
+        run: newman run backend/tests/collection.json -e backend/tests/env.json --reporters cli

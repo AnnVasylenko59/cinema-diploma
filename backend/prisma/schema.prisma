@@ -1,0 +1,146 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             Int             @id @default(autoincrement())
+  login          String          @unique
+  name           String
+  email          String          @unique
+  password       String
+  isAdmin        Boolean         @default(false)
+  avatar         String?
+  language       String?         @default("Українська")
+  theme          String?         @default("Світла")
+  favoriteGenres String[]
+  bookings       Booking[]
+  watchlist      WatchlistItem[]
+  createdAt      DateTime        @default(now())
+}
+
+model Movie {
+  id           Int       @id @default(autoincrement())
+  title        String
+  year         Int
+  durationMin  Int
+  backdropUrl  String?
+  posterUrl    String?
+  trailerUrl   String?
+  description  String
+  rating       Float?
+  director     String?
+  addedAt      DateTime  @default(now())
+  genres       MovieGenre[]
+  showtimes    Showtime[]
+  watchlist    WatchlistItem[]
+}
+
+model Genre {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+  movies MovieGenre[]
+}
+
+model MovieGenre {
+  movieId Int
+  genreId Int
+  movie   Movie @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  genre   Genre @relation(fields: [genreId], references: [id], onDelete: Cascade)
+
+  @@id([movieId, genreId])
+}
+
+model City {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  lat       Float
+  lng       Float
+  theaters  Theater[]
+
+  @@map("City")
+}
+
+model Theater {
+  id      Int      @id @default(autoincrement())
+  name    String
+  cityId  Int      @map("cityId")
+  city    City     @relation(fields: [cityId], references: [id])
+  coords  String
+  address String?
+  phone   String?
+  halls   Hall[]
+
+  @@map("Theater")
+}
+
+model Hall {
+  id        Int      @id @default(autoincrement())
+  name      String
+  totalSeats Int
+  theaterId Int
+  theater   Theater @relation(fields: [theaterId], references: [id])
+  seats     Seat[]
+  showtimes Showtime[]
+}
+
+model Seat {
+  id          Int     @id @default(autoincrement())
+  rowNum      Int
+  seatNum     Int
+  isAvailable Boolean @default(true)
+  type        String
+  hallId      Int
+  hall        Hall    @relation(fields: [hallId], references: [id])
+  tickets     Ticket[]
+}
+
+model Showtime {
+  id        Int      @id @default(autoincrement())
+  startTime DateTime
+  price     Float
+  movieId   Int
+  hallId    Int
+  movie     Movie   @relation(fields: [movieId], references: [id])
+  hall      Hall    @relation(fields: [hallId], references: [id])
+  bookings  Booking[]
+}
+
+model Booking {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  showtimeId Int
+  user       User     @relation(fields: [userId], references: [id])
+  showtime   Showtime @relation(fields: [showtimeId], references: [id])
+  tickets    Ticket[]
+  createdAt  DateTime @default(now())
+}
+
+model Ticket {
+  id        Int     @id @default(autoincrement())
+  bookingId Int
+  seatId    Int
+  price     Float
+  booking   Booking @relation(fields: [bookingId], references: [id])
+  seat      Seat    @relation(fields: [seatId], references: [id])
+}
+
+model WatchlistItem {
+  id      Int   @id @default(autoincrement())
+  userId  Int
+  movieId Int
+  user    User  @relation(fields: [userId], references: [id])
+  movie   Movie @relation(fields: [movieId], references: [id])
+
+  @@unique([userId, movieId])
+}
+
+model Person {
+  id       Int    @id @default(autoincrement())
+  fullName String
+  birthdate DateTime?
+}

@@ -1,0 +1,57 @@
+# === Системні файли та IDE ===
+.idea/
+.vscode/
+*.swp
+*.swo
+*.iml
+*.node
+.DS_Store
+Thumbs.db
+
+# === Залежності (Node.js) ===
+node_modules/
+/jspm_packages/
+.pnp
+.pnp.js
+
+# === Директорії збірки (Build / Production) ===
+dist/
+dist-ssr/
+build/
+.next/
+out/
+*.local
+
+# === Екологічні змінні та секрети ===
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.local
+*.env
+**/tests/env.json
+!.env.example
+
+# === Логи та звіти про помилки ===
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# === Тестування та покриття коду ===
+**/coverage/
+.nyc_output/
+cucumber-report.html
+junit.xml
+
+# === Специфічне для Prisma (Backend) ===
+**/generated/
+**/prisma/migrations-backup/
+
+# === Інше ===
+.temp/
+.tmp/

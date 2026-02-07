@@ -1,0 +1,213 @@
+{
+  "profile": {
+    "settings": "Settings",
+    "tabs": {
+      "profile": "Profile",
+      "genres": "Genres",
+      "preferences": "System"
+    },
+    "fields": {
+      "name": "Full Name",
+      "email": "Email (Read-only)",
+      "language": "System Language",
+      "theme": "Color Theme",
+      "themes": {
+        "light": "Light",
+        "dark": "Dark"
+      }
+    },
+    "genres": {
+      "instruction": "Select genres for recommendations:"
+    },
+    "cropper": {
+      "title": "Cropping",
+      "cancel": "Cancel",
+      "apply": "Apply"
+    },
+    "buttons": {
+      "save": "Save Changes",
+      "home": "Back to Home"
+    }
+  },
+  "header": {
+    "title": "CinemaApp",
+    "subtitle": "Your guide to cinema",
+    "login": "Login",
+    "nav": {
+      "home": "Home",
+      "theaters": "Theaters"
+    }
+  },
+  "footer": {
+    "project_info": "CinemaApp. Diploma project."
+  },
+  "auth": {
+    "login_title": "Account Login",
+    "login_subtitle": "Glad to see you again!",
+    "login_button": "Login",
+    "login_loading": "Logging in...",
+    "register_title": "Registration",
+    "register_subtitle": "Create your viewer profile",
+    "register_button": "Register",
+    "register_loading": "Registering...",
+    "error_empty": "Enter login and password",
+    "error_unexpected": "An unexpected error occurred",
+    "error_default": "An error occurred",
+    "no_account": "Don't have an account?",
+    "have_account": "Already have an account?",
+    "register_link": "Register",
+    "login_link": "Login",
+    "fields": {
+      "login": "Login",
+      "login_placeholder": "Enter login",
+      "password": "Password",
+      "password_placeholder": "Enter password",
+      "name": "Name",
+      "name_placeholder": "Alex",
+      "email": "Email",
+      "email_placeholder": "mail@example.com",
+      "confirm_password": "Confirm Password",
+      "confirm_password_placeholder": "••••••••",
+      "mismatch": "Passwords do not match",
+      "password_invalid": "Please check your password"
+    },
+    "errors": {
+      "login_taken": "This username is already taken",
+      "email_taken": "This email is already in use"
+    },
+    "requirements": {
+      "length": "8+ characters",
+      "upper": "Uppercase letter",
+      "lower": "Lowercase letter",
+      "digit": "Digit (0-9)"
+    }
+  },
+  "profile_menu": {
+    "settings": "Settings",
+    "favorites": "Favorites",
+    "history": "Booking History",
+    "ratings": "My Ratings",
+    "logout": "Logout"
+  },
+  "filters": {
+    "search_placeholder": "Search by title or director...",
+    "genres_label": "Genres",
+    "rating_label": "Rating",
+    "reset": "Reset",
+    "time_options": {
+      "any": "Any time",
+      "morning": "Morning",
+      "day": "Day",
+      "evening": "Evening"
+    },
+    "genres": {
+      "Комедія": "Comedy",
+      "Драма": "Drama",
+      "Фантастика": "Sci-Fi",
+      "Жахи": "Horror",
+      "Трилер": "Thriller",
+      "Романтика": "Romance",
+      "Детектив": "Detective",
+      "Пригоди": "Adventure",
+      "Аніме": "Anime",
+      "Бойовик": "Action",
+      "Мультфільм": "Animation",
+      "Фентезі": "Fantasy"
+    }
+  },
+  "movie": {
+    "no_poster": "Poster missing",
+    "no_trailer": "Trailer unavailable",
+    "no_description": "Plot description is currently unavailable.",
+    "director": "Director",
+    "cast": "Cast",
+    "cast_updating": "Information is being updated",
+    "unknown": "Unknown",
+    "where_to_watch": "WHERE TO WATCH?",
+    "watchlist_add": "Add to Favorites",
+    "watchlist_remove": "Remove from Favorites",
+    "details": "Details"
+  },
+  "booking": {
+    "title": "Booking",
+    "back_to_sessions": "Back to showtimes",
+    "session_expired_title": "Session Ended",
+    "session_expired_text": "Unfortunately, this session has already started or ended. Please choose another time.",
+    "confirm_title": "Booking Confirmed!",
+    "confirm_subtitle": "Your order has been successfully placed. We look forward to seeing you at the cinema!",
+    "select_seats": "Select seats — {{hall}}",
+    "selected_count": "Seats selected: {{count}}",
+    "showtime": "Showtime",
+    "total_cost": "Total Cost",
+    "confirm": "Confirm Booking",
+    "currency": "₴",
+    "screen_label": "SCREEN",
+    "download_pdf": "Ticket PDF",
+    "legend": {
+      "available": "Available",
+      "selected": "Selected",
+      "vip": "VIP",
+      "occupied": "Occupied"
+    }
+  },
+  "home": {
+    "catalog_title": "Movie Catalog",
+    "catalog_subtitle": "Latest releases and classics",
+    "updating": "Updating...",
+    "found_count": "Found: {{count}}",
+    "sync": "Syncing movies...",
+    "not_found": "Nothing found",
+    "not_found_desc": "Try changing keywords, selecting other genres, or lowering the rating threshold.",
+    "reset_filters": "Reset all filters"
+  },
+
+  "theaters": {
+    "no_sessions_title": "No sessions found",
+    "no_sessions_text": "Unfortunately, there are no available sessions for this movie in this city on the selected date.",
+    "no_movie_title": "No movie selected",
+    "no_movie_text": "Please select a movie on the home page to view the schedule.",
+    "back_home": "Back home",
+    "sync": "Syncing schedule...",
+    "no_sessions_title": "No sessions found",
+    "no_sessions_text": "Unfortunately, there are no more available sessions for this movie in your city.",
+    "next_session_prefix": "Next session:"
+  },
+  "calendar": {
+    "days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+  },
+  "bookings": {
+    "title": "Bookings",
+    "last_ticket_label": "Last ticket",
+    "movie_placeholder": "Movie session",
+    "hall_placeholder": "Hall",
+    "seats": "Seats",
+    "row": "Row",
+    "seat": "Seat",
+    "confirmed": "Confirmed",
+    "empty_title": "History is empty",
+    "empty_text": "You haven't booked any seats yet."
+  },
+  "favorites": {
+    "title": "Favorites",
+    "loading": "Loading...",
+    "empty_title": "It's empty here",
+    "empty_text": "Add movies to your favorites to keep them handy.",
+    "back_to_afisha": "Back to movies"
+  },
+  "ratings": {
+    "title": "My Ratings",
+    "empty_title": "No ratings yet",
+    "empty_text": "Your reviews help others choose the best movies. Rate your first movie today!",
+    "to_catalog": "To catalog"
+  },
+  "theaters_map": {
+    "sidebar_title": "City Theaters",
+    "no_showtimes": "No showtimes"
+  },
+  "errors": {
+    "default_title": "Connection lost",
+    "default_message": "Failed to fetch data from the server. Please check your connection or try again.",
+    "retry": "Retry",
+    "back": "Back to home"
+  }
+}
