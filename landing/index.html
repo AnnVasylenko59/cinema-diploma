@@ -40,23 +40,59 @@
     </nav>
 </header>
 
-<main role="main" id="main-content">
-    <article class="container">
+<main role="main" id="main-content" class="container">
+    <article id="hero">
         <header>
             <h1>Інформаційна вебсистема онлайн-кіноафіші</h1>
-            <p class="subtitle">Бакалаврська робота студентки СумДУ</p>
+            <p lang="en" class="subtitle-en">Information Web System of an Online Cinema Schedule</p>
+            <p class="short-description">
+                Сучасна вебплатформа для моніторингу кіносеансів, взаємодії з інтерактивною картою та автоматизації процесу бронювання квитків.
+            </p>
         </header>
-
-        <section id="about" aria-labelledby="about-heading">
-            <h2 id="about-heading">Про проєкт</h2>
-            <p>Дана система розроблена для автоматизації процесів бронювання квитків та відображення інтерактивної мапи сеансів.</p>
-
-            <figure>
-                <img src="project-preview.jpg" alt="Схематичне представлення інтерфейсу системи онлайн-кіноафіші" loading="lazy">
-                <figcaption>Рис. 1 — Візуалізація об'єкту дослідження</figcaption>
-            </figure>
-        </section>
     </article>
+
+    <section id="relevance" aria-labelledby="relevance-title">
+        <h2 id="relevance-title">Актуальність теми</h2>
+        <p>
+            Автоматизація взаємодії глядача з кінотеатрами є критично важливою для покращення користувацького досвіду.
+            Даний проєкт вирішує проблему швидкого доступу до розкладу та зручного вибору місць через інтерактивний інтерфейс.
+        </p>
+    </section>
+
+    <section id="goals-tasks" aria-labelledby="goals-title">
+        <h2 id="goals-title">Мета та завдання</h2>
+        <p><strong>Мета:</strong> Розробка масштабованої вебсистеми з інтерактивною мапою сеансів та персоналізованими рекомендаціями.</p>
+        <ul role="list">
+            <li>Проєктування реляційної бази даних з використанням <strong>Prisma ORM</strong>.</li>
+            <li>Розробка серверного API на базі <strong>Node.js</strong> та Express.</li>
+            <li>Створення реактивного інтерфейсу користувача за допомогою <strong>React</strong>.</li>
+            <li>Інтеграція картографічних сервісів для візуалізації кінотеатрів.</li>
+        </ul>
+    </section>
+
+    <section id="methodology" aria-labelledby="method-title">
+        <h2 id="method-title">Методологія дослідження</h2>
+        <p>
+            В основі проєкту лежить архітектура <strong>Monorepo</strong>, що дозволяє забезпечити цілісність коду фронтенду та бекенду.
+            Для розробки обрано стек <strong>Fullstack JavaScript</strong>, що забезпечує високу швидкість обміну даними та зручність масштабування.
+        </p>
+    </section>
+
+    <section id="results" aria-labelledby="results-title">
+        <h2 id="results-title">Очікувані результати</h2>
+        <p>
+            Створення робочого прототипу системи, що забезпечує в реальному часі моніторинг сеансів, стабільне бронювання місць та коректне відображення на мобільних пристроях.
+        </p>
+    </section>
+
+    <section id="contact" aria-labelledby="contact-title">
+        <h2 id="contact-title">Контактна інформація</h2>
+        <p>Студентка: <strong>Анна Василенко</strong></p>
+        <p>ВНЗ: <strong>Сумський державний університет</strong></p>
+        <div class="cta-links">
+            <a href="https://github.com/AnnVasylenko59/cinema-diploma" class="btn">GitHub Репозиторій</a>
+        </div>
+    </section>
 </main>
 
 <footer role="contentinfo">
