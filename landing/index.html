@@ -5,20 +5,64 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Інформаційна вебсистема онлайн-кіноафіші | Диплом СумДУ</title>
 
-    <meta name="description" content="Бакалаврська робота: розробка вебсистеми онлайн-кіноафіші з бронюванням квитків та рекомендаціями.">
-    <meta name="keywords" content="кіноафіша, бронювання квитків, СумДУ, React, Node.js, Prisma">
+    <meta property="og:title" content="Вебсистема онлайн-кіноафіші — Бакалаврський проєкт">
+    <meta property="og:description" content="Сучасна платформа для моніторингу кіносеансів та бронювання квитків.">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="project-preview.jpg">
 
-    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
-    <link rel="shortcut icon" href="favicon.ico">
+    <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "SoftwareApplication",
+            "name": "Cinema Ticket Booking System",
+            "applicationCategory": "EntertainmentApplication",
+            "operatingSystem": "Web",
+            "author": {
+                "@type": "Person",
+                "name": "Анна Василенко"
+            }
+        }
+    </script>
 
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div id="app">
-    <h1>Проєкт у розробці: Вебсистема онлайн-кіноафіші</h1>
-    <p>Ця сторінка є частиною дипломного проєкту студентки Анни Василенко.</p>
-</div>
+<header role="banner">
+    <nav class="container" aria-label="Головна навігація">
+        <div class="logo">
+            <img src="ssu-logo.png" alt="Логотип Сумського державного університету" width="50">
+            <span>Cinema Project</span>
+        </div>
+        <ul class="nav-links" role="list">
+            <li><a href="#about">Про проєкт</a></li>
+            <li><a href="#contact">Контакти</a></li>
+        </ul>
+    </nav>
+</header>
+
+<main role="main" id="main-content">
+    <article class="container">
+        <header>
+            <h1>Інформаційна вебсистема онлайн-кіноафіші</h1>
+            <p class="subtitle">Бакалаврська робота студентки СумДУ</p>
+        </header>
+
+        <section id="about" aria-labelledby="about-heading">
+            <h2 id="about-heading">Про проєкт</h2>
+            <p>Дана система розроблена для автоматизації процесів бронювання квитків та відображення інтерактивної мапи сеансів.</p>
+
+            <figure>
+                <img src="project-preview.jpg" alt="Схематичне представлення інтерфейсу системи онлайн-кіноафіші" loading="lazy">
+                <figcaption>Рис. 1 — Візуалізація об'єкту дослідження</figcaption>
+            </figure>
+        </section>
+    </article>
+</main>
+
+<footer role="contentinfo">
+    <div class="container">
+        <p>&copy; 2026 Анна Василенко. Сумський державний університет.</p>
+    </div>
+</footer>
 </body>
 </html>
