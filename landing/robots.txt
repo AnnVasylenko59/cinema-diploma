@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://AnnVasylenko59.github.io/cinema-diploma/landing/sitemap.xml
