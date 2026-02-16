@@ -81,7 +81,7 @@ export default function App() {
             } catch {
                 setGenres([]);
             }
-        } catch (_err) {
+        } catch {
             setError(t('errors.default_message'));
         } finally {
             setLoading(false);
@@ -93,7 +93,7 @@ export default function App() {
         try {
             const res = await watchlistAPI.get();
             setWatchlistIds(res.data.map(m => m.id));
-        } catch (_err) {
+        } catch {
             console.error("Failed to fetch watchlist");
         }
     }, [user]);
@@ -127,7 +127,7 @@ export default function App() {
                 { headers: { Authorization: `Bearer ${token}` } }
             );
             if (res.data.success) setStep("confirmation");
-        } catch (_err) {
+        } catch {
             alert(t('errors.default_message'));
         }
     }, [user, chosenShowtime, t]);
@@ -138,7 +138,7 @@ export default function App() {
             const res = await watchlistAPI.toggle(movieId);
             if (res.data.added) setWatchlistIds(prev => [...prev, movieId]);
             else setWatchlistIds(prev => prev.filter(id => id !== movieId));
-        } catch (_err) {
+        } catch {
             console.error("Watchlist toggle error");
         }
     };

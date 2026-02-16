@@ -99,7 +99,7 @@ app.post('/api/users/login', async (req, res) => {
             },
             token
         });
-    } catch (_error) {
+    } catch {
         res.status(500).json({ success: false, error: 'Помилка сервера' });
     }
 });
@@ -155,7 +155,7 @@ app.put('/api/users/profile', authenticateToken, async (req, res) => {
             }
         });
         res.json({ success: true, user: updatedUser });
-    } catch (_error) {
+    } catch {
         res.status(500).json({ error: 'Помилка при оновленні профілю' });
     }
 });

@@ -117,7 +117,7 @@ export const RegisterModal = ({ open, onClose, onSwitchToLogin, onRegister }) =>
         try {
             const result = await onRegister({ login, name, email, password });
             if (result.success) onClose(); else setError(result.error);
-        } catch (err) {
+        } catch {
             setError(t('auth.error_default'));
         } finally {
             setLoading(false);

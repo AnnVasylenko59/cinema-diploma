@@ -25,7 +25,7 @@ export const BookingsHistoryModal = ({ open, onClose, onGoHome }) => {
                     headers: { Authorization: `Bearer ${token}` }
                 });
                 setBookings(res.data);
-            } catch (_err) {
+            } catch {
                 console.error("Failed to fetch history");
             } finally {
                 setLoading(false);
