@@ -202,7 +202,7 @@ const checkAvailability = async (req, res) => {
         }
 
         res.json({ available: !existing });
-    } catch (error) {
+    } catch {
         res.status(500).json({ error: "Помилка перевірки" });
     }
 };

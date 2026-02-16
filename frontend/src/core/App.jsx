@@ -78,7 +78,7 @@ export default function App() {
             try {
                 const genreRes = await genreAPI.getAll();
                 setGenres(genreRes.data || []);
-            } catch (_genreErr) {
+            } catch {
                 setGenres([]);
             }
         } catch (_err) {

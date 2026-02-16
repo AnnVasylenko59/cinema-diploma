@@ -28,7 +28,7 @@ export const LoginModal = ({ open, onClose, onLogin, onSwitchToRegister }) => {
         try {
             const result = await onLogin({ login, password });
             if (result.success) onClose(); else setError(result.error);
-        } catch (err) { setError(t('auth.error_unexpected')); } finally { setLoading(false); }
+        } catch { setError(t('auth.error_unexpected')); } finally { setLoading(false); }
     };
 
     return (
