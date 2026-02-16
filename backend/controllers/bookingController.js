@@ -8,7 +8,7 @@ const bookingController = {
             const { showtimeId } = req.params;
             const sId = parseInt(showtimeId);
 
-            if (isNaN(sId)) return res.status(400).json({ error: "Некоректний ID сеансу" });
+            if (isNaN(sId)) return res.status(400).json({ error: 'Некоректний ID сеансу' });
 
             // Отримуємо сеанс, включаючи бронювання та вкладені в них квитки
             const showtime = await prisma.showtime.findUnique({
@@ -24,7 +24,7 @@ const bookingController = {
                 }
             });
 
-            if (!showtime) return res.status(404).json({ message: "Сеанс не знайдено" });
+            if (!showtime) return res.status(404).json({ message: 'Сеанс не знайдено' });
 
             // Збираємо всі seatId з усіх квитків у всіх бронюваннях цього сеансу
             const occupiedSeatIds = showtime.bookings.flatMap(booking =>
@@ -42,8 +42,8 @@ const bookingController = {
                 hall: { ...showtime.hall, seats: seatsWithStatus }
             });
         } catch (error) {
-            console.error("Fetch booking data error:", error);
-            res.status(500).json({ message: "Помилка сервера при завантаженні зали" });
+            console.error('Fetch booking data error:', error);
+            res.status(500).json({ message: 'Помилка сервера при завантаженні зали' });
         }
     },
 
@@ -54,7 +54,7 @@ const bookingController = {
             const userId = req.user.userId;
 
             if (!showtimeId || !selectedSeats || selectedSeats.length === 0) {
-                return res.status(400).json({ error: "Місця не обрано" });
+                return res.status(400).json({ error: 'Місця не обрано' });
             }
 
             const showtime = await prisma.showtime.findUnique({
@@ -62,7 +62,7 @@ const bookingController = {
                 select: { id: true, price: true, hallId: true }
             });
 
-            if (!showtime) return res.status(404).json({ error: "Сеанс не знайдено" });
+            if (!showtime) return res.status(404).json({ error: 'Сеанс не знайдено' });
 
             const result = await prisma.$transaction(async (tx) => {
                 // Перевірка зайнятості через зв'язок Booking -> Ticket
@@ -79,7 +79,7 @@ const bookingController = {
                 });
 
                 if (alreadyTakenTickets.length > 0) {
-                    throw new Error("Деякі з обраних місць уже заброньовані іншим користувачем");
+                    throw new Error('Деякі з обраних місць уже заброньовані іншим користувачем');
                 }
 
                 // Створення запису бронювання
@@ -117,8 +117,8 @@ const bookingController = {
 
             res.status(201).json({ success: true, bookingId: result.id });
         } catch (error) {
-            console.error("Transaction failed:", error.message);
-            res.status(500).json({ error: error.message || "Помилка при збереженні бронювання" });
+            console.error('Transaction failed:', error.message);
+            res.status(500).json({ error: error.message || 'Помилка при збереженні бронювання' });
         }
     },
 
@@ -142,8 +142,8 @@ const bookingController = {
             });
             res.json(bookings);
         } catch (error) {
-            console.error("History fetch error:", error);
-            res.status(500).json({ error: "Помилка завантаження історії бронювань" });
+            console.error('History fetch error:', error);
+            res.status(500).json({ error: 'Помилка завантаження історії бронювань' });
         }
     }
 };

@@ -115,7 +115,7 @@ async function main() {
             data: {
                 name: `Cinema City ${city.name}`,
                 cityId: city.id,
-                address: `Центральна площа, 1`,
+                address: 'Центральна площа, 1',
                 coords: `${city.lat},${city.lng}`,
                 halls: {
                     create: [

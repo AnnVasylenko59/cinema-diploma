@@ -42,7 +42,7 @@ const authenticateToken = (req, res, next) => {
     jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret-key-for-development', (err, user) => {
         if (err) {
             // Виводимо причину 403 помилки в консоль сервера
-            console.error("❌ JWT Verification Error:", err.message);
+            console.error('❌ JWT Verification Error:', err.message);
             return res.status(403).json({ error: 'Недійсний або прострочений токен' });
         }
         req.user = user;
@@ -66,7 +66,7 @@ app.get('/api/users/check', async (req, res) => {
         // Якщо користувача не знайдено, значить логін/email вільні (available: true)
         res.json({ available: !existingUser });
     } catch (error) {
-        console.error("❌ Check error:", error);
+        console.error('❌ Check error:', error);
         res.status(500).json({ error: 'Помилка при перевірці доступності' });
     }
 });

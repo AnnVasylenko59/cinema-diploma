@@ -51,8 +51,8 @@ const register = async (req, res) => {
         res.status(201).json({ success: true, user: userWithoutPassword });
 
     } catch (error) {
-        console.error("Register Error:", error);
-        res.status(500).json({ success: false, error: "Помилка сервера при реєстрації" });
+        console.error('Register Error:', error);
+        res.status(500).json({ success: false, error: 'Помилка сервера при реєстрації' });
     }
 };
 
@@ -177,7 +177,7 @@ const updateProfile = async (req, res) => {
 
         res.json({
             success: true,
-            message: "Профіль успішно оновлено",
+            message: 'Профіль успішно оновлено',
             user: updatedUser
         });
 
@@ -203,7 +203,7 @@ const checkAvailability = async (req, res) => {
 
         res.json({ available: !existing });
     } catch {
-        res.status(500).json({ error: "Помилка перевірки" });
+        res.status(500).json({ error: 'Помилка перевірки' });
     }
 };
 

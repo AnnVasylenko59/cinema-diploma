@@ -17,7 +17,7 @@ const auth = (req, res, next) => {
 
         next();
     } catch (error) {
-        console.error("JWT Verification Error:", error.message);
+        console.error('JWT Verification Error:', error.message);
         return res.status(401).json({ error: 'Недійсний токен або термін дії закінчився' });
     }
 };
