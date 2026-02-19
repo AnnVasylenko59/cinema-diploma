@@ -1,0 +1,36 @@
+{
+  "source": {
+    "include": [
+      "backend/controllers",
+      "backend/middleware",
+      "backend/utils",
+      "backend/app.js",
+      "frontend/src/services",
+      "frontend/src/hooks",
+      "frontend/src/utils",
+      "frontend/src/components/pages",
+      "frontend/src/components/movies/grid",
+      "frontend/src/components/layout/auth"
+    ],
+    "exclude": [
+      "node_modules",
+      "backend/prisma",
+      "backend/tests"
+    ],
+    "includePattern": ".+\\.js(doc|x)?$",
+    "excludePattern": "(^|\\/|\\\\)_"
+  },
+  "opts": {
+    "template": "node_modules/docdash",
+    "destination": "./docs/gen",
+    "recurse": true,
+    "encoding": "utf8"
+  },
+  "templates": {
+    "docdash": {
+      "static": true,
+      "search": true,
+      "collapse": true
+    }
+  }
+}

@@ -4,14 +4,24 @@ import Screen from "./Screen.jsx";
 import Seat from "./Seat.jsx";
 import BookingLegend from "./BookingLegend.jsx";
 
+/**
+ * Компонент для візуального вибору місць у кінозалі.
+ * @component
+ * @param {Object} props - Властивості компонента.
+ * @param {Object} props.showtime - Об'єкт сеансу, що містить дані про залу та місця.
+ * @param {Array<string>} props.selectedSeats - Масив ідентифікаторів обраних місць (ряд-місце).
+ * @param {Function} props.setSelectedSeats - Функція для оновлення стану обраних місць.
+ * @returns {JSX.Element} Інтерфейс вибору місць із екраном та легендою.
+ */
 export const SeatPicker = ({ showtime, selectedSeats, setSelectedSeats }) => {
     const { t } = useTranslation();
     const hall = showtime?.hall;
     const allSeats = hall?.seats || [];
 
-    const rows = useMemo(() =>
-            [...new Set(allSeats.map(s => s.rowNum))].sort((a, b) => a - b),
-        [allSeats]);
+    const rows = useMemo(() => {
+        const seats = showtime?.hall?.seats || [];
+        return [...new Set(seats.map(s => s.rowNum))].sort((a, b) => a - b);
+    }, [showtime]);
 
     const toggleSeat = (seat) => {
         if (seat.isOccupied) return;

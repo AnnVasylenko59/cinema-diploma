@@ -1,10 +1,8 @@
 /**
- * Валідація імені користувача згідно з вимогою R1.9.
- * Вимоги:
- * - Обов'язкове поле
- * - Максимум 20 символів
- * - Тільки літери та цифри (латиниця)
- * - (Додатково: мінімум 3 символи для адекватності)
+ * Валідація імені користувача (логіна).
+ * @function validateUsername
+ * @param {string} username - Логін для перевірки.
+ * @returns {Object} Об'єкт зі статусом isValid та текстом помилки error.
  */
 function validateUsername(username) {
     if (!username || typeof username !== 'string') {
@@ -31,10 +29,10 @@ function validateUsername(username) {
 }
 
 /**
- * Валідація пароля згідно з вимогою R1.10.
- * Вимоги:
- * - Обов'язкове поле
- * - Мінімум 8 символів
+ * Валідація пароля користувача.
+ * @function validatePassword
+ * @param {string} password - Пароль для перевірки.
+ * @returns {Object} Результат валідації.
  */
 function validatePassword(password) {
     if (!password || typeof password !== 'string') {
@@ -49,10 +47,10 @@ function validatePassword(password) {
 }
 
 /**
- * Валідація рейтингу фільму (для вимоги R1.8).
- * Логіка:
- * - Має бути числом
- * - Діапазон від 1 до 10 (або 1-5, як у вас прийнято)
+ * Валідація цифрового рейтингу фільму.
+ * @function validateRating
+ * @param {number|string} rating - Значення рейтингу (1-10).
+ * @returns {Object} Результат валідації.
  */
 function validateRating(rating) {
     if (rating === undefined || rating === null || rating === '') {
@@ -73,12 +71,10 @@ function validateRating(rating) {
 }
 
 /**
- * Валідація email згідно з вимогами фронтенду
- * Вимоги:
- * - Обов'язкове поле
- * - Повинен містити @
- * - Повинен мати коректний домен з крапкою
- * - Домен має містити мінімум 2 символи після крапки
+ * Валідація формату email.
+ * @function validateEmail
+ * @param {string} email - Адреса пошти.
+ * @returns {Object} Результат валідації.
  */
 function validateEmail(email) {
     if (!email || typeof email !== 'string') {

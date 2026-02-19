@@ -5,7 +5,12 @@ const { validateUsername, validatePassword, validateEmail } = require('../utils/
 
 const prisma = new PrismaClient();
 
-// 1. РЕЄСТРАЦІЯ
+/**
+ * Виконує реєстрацію нового користувача з валідацією даних та хешуванням пароля.
+ * @async
+ * @param {Object} req - Запит, що містить login, email, name, password.
+ * @param {Object} res - Відповідь із даними створеного користувача.
+ */
 const register = async (req, res) => {
     try {
         const { login, email, name, password } = req.body;
@@ -47,7 +52,7 @@ const register = async (req, res) => {
             data: { login, email, name, password: hashedPassword, isAdmin: false }
         });
 
-        const { password: _, ...userWithoutPassword } = newUser;
+        const { ...userWithoutPassword } = newUser;
         res.status(201).json({ success: true, user: userWithoutPassword });
 
     } catch (error) {
@@ -56,7 +61,12 @@ const register = async (req, res) => {
     }
 };
 
-// 2. ЛОГІН
+/**
+ * Виконує авторизацію користувача та повертає JWT токен.
+ * @async
+ * @param {Object} req - Запит із логіном та паролем.
+ * @param {Object} res - Відповідь із JWT токеном та даними користувача.
+ */
 const loginUser = async (req, res) => {
     try {
         const { login, password } = req.body;
@@ -105,7 +115,12 @@ const loginUser = async (req, res) => {
     }
 };
 
-// 3. ОТРИМАННЯ ПРОФІЛЮ
+/**
+ * Отримує дані профілю поточного авторизованого користувача.
+ * @async
+ * @param {Object} req - Об'єкт запиту з даними з JWT токена.
+ * @param {Object} res - Відповідь з публічними даними профілю.
+ */
 const getProfile = async (req, res) => {
     try {
         const userId = req.user ? req.user.userId : null;
@@ -141,7 +156,12 @@ const getProfile = async (req, res) => {
     }
 };
 
-// 4. ОНОВЛЕННЯ ПРОФІЛЮ
+/**
+ * Оновлює параметри профілю поточного користувача.
+ * @async
+ * @param {Object} req - Запит з новими даними профілю.
+ * @param {Object} res - Результат оновлення.
+ */
 const updateProfile = async (req, res) => {
     try {
         const userId = req.user ? req.user.userId : null;
@@ -190,6 +210,12 @@ const updateProfile = async (req, res) => {
     }
 };
 
+/**
+ * Перевіряє доступність логіна або email у системі.
+ * @async
+ * @param {Object} req - Запит з параметром login або email.
+ * @param {Object} res - Об'єкт з прапорцем available.
+ */
 const checkAvailability = async (req, res) => {
     try {
         const { login, email } = req.query;

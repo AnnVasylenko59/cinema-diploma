@@ -1,6 +1,13 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
+/**
+ * Отримує список сеансів на основі заданих фільтрів (фільм, дата, місто).
+ * @async
+ * @param {Object} req - Об'єкт запиту з query параметрами.
+ * @param {Object} res - Об'єкт відповіді.
+ * @returns {Promise<void>} JSON масив сеансів.
+ */
 const getShowtimes = async (req, res) => {
     try {
         const { movieId, date, cityId } = req.query;

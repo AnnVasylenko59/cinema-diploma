@@ -1,23 +1,54 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-const getCities = async (req, res) => {
+/**
+ * Отримує список сеансів на основі заданих фільтрів (фільм, дата, місто).
+ * @async
+ * @param {Object} req - Об'єкт запиту з query параметрами.
+ * @param {Object} res - Об'єкт відповіді.
+ * @returns {Promise<void>} JSON масив сеансів.
+ */
+const getShowtimes = async (req, res) => {
     try {
-        const cities = await prisma.city.findMany({ orderBy: { name: 'asc' } });
-        res.json(cities);
-    } catch (error) { res.status(500).json({ error: error.message }); }
-};
+        const { movieId, date, cityId } = req.query;
+        const where = {};
 
-const getAllTheaters = async (req, res) => {
-    try {
-        const { cityId } = req.query;
-        const where = cityId ? { cityId: parseInt(cityId) } : {};
-        const theaters = await prisma.theater.findMany({
+        if (movieId) where.movieId = parseInt(movieId);
+        if (cityId) {
+            where.hall = { theater: { cityId: parseInt(cityId) } };
+        }
+
+        if (date) {
+            const start = new Date(date);
+            start.setUTCHours(0, 0, 0, 0);
+            const end = new Date(date);
+            end.setUTCHours(23, 59, 59, 999);
+            where.startTime = { gte: start, lte: end };
+        }
+
+        const showtimes = await prisma.showtime.findMany({
             where,
-            include: { halls: true }
+            include: {
+                movie: true,
+                hall: {
+                    include: {
+                        theater: true,
+                        seats: {
+                            orderBy: [
+                                { rowNum: 'asc' },
+                                { seatNum: 'asc' }
+                            ]
+                        }
+                    }
+                }
+            },
+            orderBy: { startTime: 'asc' }
         });
-        res.json({ theaters });
-    } catch (error) { res.status(500).json({ error: error.message }); }
+
+        res.json(showtimes);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 };
 
-module.exports = { getAllTheaters, getCities };
+module.exports = { getShowtimes };

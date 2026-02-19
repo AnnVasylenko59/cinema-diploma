@@ -1,8 +1,18 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
+/**
+ * Контролер для керування бронюваннями
+ * @namespace bookingController
+ */
 const bookingController = {
-    // 1. Отримання схеми зали з актуальним статусом зайнятості місць
+    /**
+     * Отримує схему зали з актуальним статусом зайнятості місць для конкретного сеансу.
+     * @async
+     * @param {Object} req - Об'єкт запиту Express, містить showtimeId в параметрах.
+     * @param {Object} res - Об'єкт відповіді Express.
+     * @returns {Promise<void>} JSON із даними сеансу та статусом кожного місця.
+     */
     getBookingData: async (req, res) => {
         try {
             const { showtimeId } = req.params;
@@ -10,7 +20,6 @@ const bookingController = {
 
             if (isNaN(sId)) return res.status(400).json({ error: 'Некоректний ID сеансу' });
 
-            // Отримуємо сеанс, включаючи бронювання та вкладені в них квитки
             const showtime = await prisma.showtime.findUnique({
                 where: { id: sId },
                 include: {
@@ -26,12 +35,10 @@ const bookingController = {
 
             if (!showtime) return res.status(404).json({ message: 'Сеанс не знайдено' });
 
-            // Збираємо всі seatId з усіх квитків у всіх бронюваннях цього сеансу
             const occupiedSeatIds = showtime.bookings.flatMap(booking =>
                 booking.tickets.map(ticket => ticket.seatId)
             );
 
-            // Формуємо масив місць, позначаючи зайняті
             const seatsWithStatus = showtime.hall.seats.map(seat => ({
                 ...seat,
                 isOccupied: occupiedSeatIds.includes(seat.id)
@@ -47,7 +54,14 @@ const bookingController = {
         }
     },
 
-    // 2. Створення бронювання
+    /**
+     * Створює нове бронювання та відповідні квитки.
+     * Використовує транзакцію для забезпечення цілісності даних та перевірки зайнятості місць.
+     * @async
+     * @param {Object} req - Запит, що містить showtimeId та масив selectedSeats.
+     * @param {Object} res - Відповідь із результатом створення.
+     * @returns {Promise<void>} JSON із статусом успіху та ID бронювання.
+     */
     createBooking: async (req, res) => {
         try {
             const { showtimeId, selectedSeats } = req.body;
@@ -65,7 +79,6 @@ const bookingController = {
             if (!showtime) return res.status(404).json({ error: 'Сеанс не знайдено' });
 
             const result = await prisma.$transaction(async (tx) => {
-                // Перевірка зайнятості через зв'язок Booking -> Ticket
                 const alreadyTakenTickets = await tx.ticket.findMany({
                     where: {
                         booking: { showtimeId: showtime.id },
@@ -82,7 +95,6 @@ const bookingController = {
                     throw new Error('Деякі з обраних місць уже заброньовані іншим користувачем');
                 }
 
-                // Створення запису бронювання
                 const booking = await tx.booking.create({
                     data: {
                         userId: userId,
@@ -90,7 +102,6 @@ const bookingController = {
                     }
                 });
 
-                // Створення квитків для кожного обраного місця
                 for (const seatKey of selectedSeats) {
                     const [row, num] = seatKey.split('-').map(Number);
 
@@ -122,7 +133,13 @@ const bookingController = {
         }
     },
 
-    // 3. Історія бронювань для профілю
+    /**
+     * Отримує повну історію бронювань поточного авторизованого користувача.
+     * @async
+     * @param {Object} req - Об'єкт запиту з даними користувача в req.user.
+     * @param {Object} res - Об'єкт відповіді.
+     * @returns {Promise<void>} Масив об'єктів бронювань.
+     */
     getUserBookings: async (req, res) => {
         try {
             const bookings = await prisma.booking.findMany({

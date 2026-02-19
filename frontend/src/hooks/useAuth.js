@@ -3,6 +3,10 @@ import { authAPI } from "../services/api";
 import api from "../services/api";
 import i18n from '../core/i18n.js';
 
+/**
+ * Кастомний хук для керування станом аутентифікації користувача.
+ * @returns {Object} Об'єкт зі станом (user, loading, error) та функціями (login, register, logout, updateUser).
+ */
 export const useAuth = () => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -29,6 +33,11 @@ export const useAuth = () => {
         }
     }, []);
 
+    /**
+     * Оновлює дані користувача в локальному стані та LocalStorage.
+     * @param {Object} updatedData - Новий об'єкт даних користувача.
+     * @returns {void}
+     */
     const updateUser = (updatedData) => {
         if (!updatedData) return;
 
@@ -52,6 +61,12 @@ export const useAuth = () => {
         }
     };
 
+    /**
+     * Виконує вхід користувача в систему.
+     * @async
+     * @param {Object} credentials - Логін та пароль.
+     * @returns {Promise<Object>} Об'єкт результату з success та даними користувача або помилкою.
+     */
     const login = async (credentials) => {
         setLoading(true);
         setError(null);
@@ -79,6 +94,12 @@ export const useAuth = () => {
         }
     };
 
+    /**
+     * Реєструє нового користувача.
+     * @async
+     * @param {Object} userData - Дані профілю для реєстрації.
+     * @returns {Promise<Object>} Об'єкт результату успіху або помилки.
+     */
     const register = async (userData) => {
         setLoading(true);
         setError(null);
@@ -101,6 +122,10 @@ export const useAuth = () => {
         }
     };
 
+    /**
+     * Очищує дані сесії та виходить із системи.
+     * @returns {void}
+     */
     const logout = () => {
         setUser(null);
         setError(null);

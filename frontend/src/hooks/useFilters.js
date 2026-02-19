@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
 import { movieAPI } from "../services/api";
 
+/**
+ * Хук для керування фільтрацією списку фільмів.
+ * @returns {Object} Об'єкт зі станами фільтрів (query, selectedGenres, rating, time) та результатом filtered.
+ */
 export const useFilters = () => {
     const [query, setQuery] = useState("");
     const [selectedGenres, setSelectedGenres] = useState([]);
@@ -11,6 +15,10 @@ export const useFilters = () => {
     const [error, setError] = useState(null);
 
     useEffect(() => {
+        /**
+         * Внутрішня функція для завантаження початкового списку фільмів.
+         * @async
+         */
         const fetchMovies = async () => {
             try {
                 setLoading(true);
@@ -29,6 +37,10 @@ export const useFilters = () => {
         fetchMovies();
     }, []);
 
+    /**
+     * Відфільтрований масив фільмів на основі активних параметрів пошуку.
+     * @type {Array<Object>}
+     */
     const filtered = movies.filter(movie => {
         const matchesQuery = !query ||
             movie.title.toLowerCase().includes(query.toLowerCase()) ||

@@ -21,6 +21,12 @@ app.use((req, res, next) => {
 
 // --- 2. СЛУЖБОВІ ФУНКЦІЇ ТА АУТЕНТИФІКАЦІЯ ---
 
+/**
+ * Перевіряє стан підключення до бази даних Prisma.
+ * @async
+ * @function checkDatabaseConnection
+ * @returns {Promise<boolean>} True, якщо підключення встановлено.
+ */
 async function checkDatabaseConnection() {
     try {
         await prisma.$connect();
@@ -32,7 +38,13 @@ async function checkDatabaseConnection() {
     }
 }
 
-// Middleware для перевірки JWT токена з дебаг-логами
+/**
+ * Middleware для аутентифікації користувачів через JWT.
+ * @function authenticateToken
+ * @param {Object} req - Запит.
+ * @param {Object} res - Відповідь.
+ * @param {Function} next - Наступний мідлвар.
+ */
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];

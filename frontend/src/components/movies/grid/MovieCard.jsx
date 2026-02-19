@@ -5,12 +5,15 @@ import { cardStyles as s } from "./GridStyles";
 import { Card, Badge } from "../../ui/Atoms";
 
 /**
- * Компонент картки фільму для головної сітки.
- * * @component
+ * Компонент картки фільму для відображення в каталозі.
+ * @component
  * @param {Object} props - Властивості компонента.
- * @param {Object} props.movie - Дані про фільм (id, title, posterUrl, rating).
- * @param {Function} props.onOpen - Функція для відкриття модального вікна з деталями.
- * @returns {JSX.Element} Інтерактивна картка з ефектами наведення.
+ * @param {Object} props.movie - Об'єкт із даними про фільм (назва, постер, рейтинг тощо).
+ * @param {boolean} props.isFavorite - Статус перебування фільму у списку бажаного.
+ * @param {Function} props.onOpen - Функція для відкриття детальної інформації.
+ * @param {Function} props.onToggleWatchlist - Функція для зміни статусу "обране".
+ * @param {Function} props.t - Функція i18next для локалізації текстів.
+ * @returns {JSX.Element} Картка фільму з підтримкою взаємодії.
  */
 export const MovieCard = ({ movie, isFavorite, onOpen, onToggleWatchlist, t }) => {
     return (

@@ -16,6 +16,20 @@ import { CalendarPicker } from "./CalendarPicker";
 import { TheatersMap } from "./TheatersMap";
 import { showtimeAPI, theaterAPI, movieAPI } from "../../../services/api";
 
+/**
+ * Сторінка вибору кінотеатру та часу сеансу для конкретного фільму.
+ * @component
+ * @param {Object} props - Властивості компонента.
+ * @param {Object} props.currentMovie - Об'єкт поточного обраного фільму.
+ * @param {Function} props.setStep - Навігація між кроками.
+ * @param {Function} props.onPickShowtime - Коллбек вибору сеансу.
+ * @param {Function} props.onOpenMovie - Коллбек відкриття деталей рекомендованого фільму.
+ * @param {string} props.selectedDate - Обрана дата у форматі ISO.
+ * @param {Function} props.setSelectedDate - Зміна дати.
+ * @param {Object} props.selectedCity - Обране місто.
+ * @param {Function} props.setSelectedCity - Зміна міста.
+ * @returns {JSX.Element} Сторінка з картою кінотеатрів та рекомендованими фільмами.
+ */
 export const TheatersPage = ({
                                  currentMovie: propMovie,
                                  setStep,
@@ -44,6 +58,12 @@ export const TheatersPage = ({
     const [isCalendarOpen, setIsCalendarOpen] = useState(false);
     const calendarRef = useRef(null);
 
+    /**
+     * Отримує список міст із сервера.
+     * @async
+     * @function fetchCities
+     * @returns {Promise<Object>} Обране або перше доступне місто.
+     */
     const fetchCities = useCallback(async () => {
         try {
             const res = await theaterAPI.getCities();
@@ -60,6 +80,13 @@ export const TheatersPage = ({
         }
     }, [selectedCity, setSelectedCity]);
 
+    /**
+     * Завантажує сеанси, кінотеатри та рекомендації для обраного міста.
+     * @async
+     * @function loadContent
+     * @param {Object} city - Об'єкт міста, для якого завантажується контент.
+     * @returns {Promise<void>}
+     */
     const loadContent = useCallback(async (city = selectedCity) => {
         if (!propMovie) {
             setIsLoading(false);
@@ -104,7 +131,7 @@ export const TheatersPage = ({
             }
 
             setError(false);
-        } catch (e) {
+        } catch (e) { // ВИПРАВЛЕНО: додано (e), бо змінна використовується нижче
             console.error("Content load error:", e);
             setError(true);
         } finally {
@@ -124,7 +151,7 @@ export const TheatersPage = ({
             try {
                 const city = await fetchCities();
                 await loadContent(city);
-            } catch (e) {
+            } catch { // ВИПРАВЛЕНО: видалено (e), бо вона тут не використовується
                 setError(true);
                 setIsLoading(false);
             }
@@ -165,7 +192,6 @@ export const TheatersPage = ({
 
     if (isLoading) return <LoadingState label={t('theaters.sync')} />;
 
-    // 4. Основний контент
     return (
         <div className="space-y-8 pb-20">
             <PageHeader

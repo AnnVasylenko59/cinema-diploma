@@ -1,11 +1,16 @@
 import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
+/**
+ * Отримує список рекомендованих фільмів на основі жанрів поточного фільму.
+ * @async
+ * @param {Object} req - Запит з параметром id фільму.
+ * @param {Object} res - Відповідь з масивом рекомендованих фільмів.
+ */
 export const getRecommendedMovies = async (req, res) => {
     try {
         const { id } = req.params;
 
-        // Жанри поточного фільму
         const currentMovie = await prisma.movie.findUnique({
             where: { id: parseInt(id) },
             include: { genres: true }
@@ -15,7 +20,6 @@ export const getRecommendedMovies = async (req, res) => {
 
         const genreIds = currentMovie.genres.map(g => g.genreId);
 
-        // 2. Інші фільми з такими ж жанрами
         const movies = await prisma.movie.findMany({
             where: {
                 id: { not: parseInt(id) },
@@ -36,12 +40,10 @@ export const getRecommendedMovies = async (req, res) => {
 };
 
 /**
- * Отримує список усіх фільмів з бази даних.
- * * @async
- * @function getAllMovies
- * @param {Object} req - Об'єкт запиту Express.
- * @param {Object} res - Об'єкт відповіді Express.
- * @returns {Promise<void>} Повертає статус 200 та масив фільмів у форматі JSON.
+ * Отримує список усіх фільмів з бази даних з фільтрацією та пагінацією.
+ * @async
+ * @param {Object} req - Об'єкт запиту з query параметрами (genres, minRating, page, limit).
+ * @param {Object} res - Відповідь з масивом фільмів та даними пагінації.
  */
 export const getAllMovies = async (req, res) => {
     try {
@@ -99,6 +101,12 @@ export const getAllMovies = async (req, res) => {
     }
 };
 
+/**
+ * Отримує детальну інформацію про конкретний фільм за його ID.
+ * @async
+ * @param {Object} req - Запит з параметром id.
+ * @param {Object} res - Відповідь з даними фільму.
+ */
 export const getMovieById = async (req, res) => {
     try {
         const { id } = req.params;

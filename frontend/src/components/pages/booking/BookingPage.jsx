@@ -9,6 +9,15 @@ import { LoadingState } from "../LoadingState.jsx";
 import { BookingSummary } from "./BookingSummary.jsx";
 import { ErrorState } from "../../ui/ErrorState.jsx";
 
+/**
+ * Сторінка вибору місць у залі для обраного сеансу.
+ * @component
+ * @param {Object} props - Властивості компонента.
+ * @param {Object} props.chosenShowtime - Дані обраного сеансу.
+ * @param {Function} props.setStep - Функція перемикання кроків бронювання.
+ * @param {Function} props.onConfirmSeats - Коллбек для підтвердження вибору місць.
+ * @returns {JSX.Element|null} Інтерфейс вибору місць або стан помилки/завантаження.
+ */
 export const BookingPage = ({ chosenShowtime, setStep, onConfirmSeats }) => {
     const { t, i18n } = useTranslation();
     const [fullShowtime, setFullShowtime] = useState(null);
@@ -19,6 +28,12 @@ export const BookingPage = ({ chosenShowtime, setStep, onConfirmSeats }) => {
     const currentLocale = i18n.language === 'en' ? 'en-US' : 'uk-UA';
     const isPastSession = new Date(chosenShowtime.startTime) < new Date();
 
+    /**
+     * Завантажує актуальні дані про зайняті місця з сервера.
+     * @async
+     * @function fetchSeats
+     * @returns {Promise<void>} Оновлює локальний стан даними сеансу.
+     */
     const fetchSeats = useCallback(async () => {
         if (isPastSession) {
             setIsLoading(false);
@@ -30,7 +45,7 @@ export const BookingPage = ({ chosenShowtime, setStep, onConfirmSeats }) => {
         try {
             const res = await axios.get(`http://localhost:5000/api/bookings/showtime/${chosenShowtime.id}`);
             setFullShowtime(res.data);
-        } catch (err) {
+        } catch {
             setError(true);
         } finally {
             setIsLoading(false);

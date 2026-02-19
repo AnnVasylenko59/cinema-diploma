@@ -11,6 +11,30 @@ import { ErrorState } from "../../ui/ErrorState";
 import { LoadingState } from "../LoadingState.jsx";
 import { EmptyState } from "../../ui/EmptyState";
 
+/**
+ * Головна сторінка каталогу фільмів із слайдером та фільтрами.
+ * @component
+ * @param {Object} props - Властивості компонента.
+ * @param {string} props.query - Текст пошукового запиту.
+ * @param {Function} props.setQuery - Функція оновлення пошуку.
+ * @param {Array<string>} props.selectedGenres - Обрані жанри.
+ * @param {Function} props.setSelectedGenres - Функція оновлення жанрів.
+ * @param {number} props.rating - Мінімальний рейтинг.
+ * @param {Function} props.setRating - Функція оновлення рейтингу.
+ * @param {string} props.time - Обраний час сеансів.
+ * @param {Function} props.setTime - Функція оновлення часу.
+ * @param {Array} props.genres - Список усіх доступних жанрів.
+ * @param {Array} props.filtered - Список відфільтрованих фільмів.
+ * @param {Array} props.movies - Повний список фільмів для слайдера.
+ * @param {boolean} props.loading - Статус завантаження.
+ * @param {Object|null} props.error - Об'єкт помилки.
+ * @param {Function} props.onOpenMovie - Коллбек для відкриття модалки фільму.
+ * @param {Function} props.onWatchTrailer - Коллбек для перегляду трейлера.
+ * @param {Function} props.onRetry - Коллбек для повторного запиту при помилці.
+ * @param {Array<number>} props.watchlistIds - ID фільмів у списку бажаного.
+ * @param {Function} props.onToggleWatchlist - Коллбек для перемикання списку бажаного.
+ * @returns {JSX.Element} Головна сторінка з сіткою фільмів або станами завантаження/помилки.
+ */
 export const HomePage = ({
                              query, setQuery, selectedGenres, setSelectedGenres,
                              rating, setRating, time, setTime,

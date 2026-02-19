@@ -6,6 +6,16 @@ import { BaseAuthModal } from "./BaseAuthModal.jsx";
 import { FormField } from "./FormField.jsx";
 import { AuthFooter } from "./AuthFooter.jsx";
 
+/**
+ * Модальне вікно для входу користувача в систему.
+ * @component
+ * @param {Object} props - Властивості компонента.
+ * @param {boolean} props.open - Стан видимості модального вікна.
+ * @param {Function} props.onClose - Функція закриття вікна.
+ * @param {Function} props.onLogin - Функція для виконання запиту на авторизацію.
+ * @param {Function} props.onSwitchToRegister - Функція для перемикання на вікно реєстрації.
+ * @returns {JSX.Element} Форма авторизації з полями логіна та пароля.
+ */
 export const LoginModal = ({ open, onClose, onLogin, onSwitchToRegister }) => {
     const { t } = useTranslation();
     const [login, setLogin] = useState("");
@@ -20,6 +30,12 @@ export const LoginModal = ({ open, onClose, onLogin, onSwitchToRegister }) => {
         }
     }, [open]);
 
+    /**
+     * Обробляє відправку форми та валідує введені дані.
+     * @async
+     * @param {React.FormEvent} e - Подія відправки форми.
+     * @returns {Promise<void>} Виконує вхід та закриває вікно при успіху.
+     */
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError("");
