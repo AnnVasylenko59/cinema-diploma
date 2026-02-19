@@ -38,7 +38,8 @@ export default [
             'landing/',
             '.env',
             'backend/generated/',
-            'backend/tests/'
+            'backend/tests/',
+            'docs/gen/**'
         ],
     }
 ];

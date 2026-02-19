@@ -35,6 +35,14 @@ export const getRecommendedMovies = async (req, res) => {
     }
 };
 
+/**
+ * Отримує список усіх фільмів з бази даних.
+ * * @async
+ * @function getAllMovies
+ * @param {Object} req - Об'єкт запиту Express.
+ * @param {Object} res - Об'єкт відповіді Express.
+ * @returns {Promise<void>} Повертає статус 200 та масив фільмів у форматі JSON.
+ */
 export const getAllMovies = async (req, res) => {
     try {
         const { query, genres, minRating, page = 1, limit = 20 } = req.query;

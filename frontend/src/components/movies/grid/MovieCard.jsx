@@ -4,6 +4,14 @@ import { minutesToHMM } from "../../../utils";
 import { cardStyles as s } from "./GridStyles";
 import { Card, Badge } from "../../ui/Atoms";
 
+/**
+ * Компонент картки фільму для головної сітки.
+ * * @component
+ * @param {Object} props - Властивості компонента.
+ * @param {Object} props.movie - Дані про фільм (id, title, posterUrl, rating).
+ * @param {Function} props.onOpen - Функція для відкриття модального вікна з деталями.
+ * @returns {JSX.Element} Інтерактивна картка з ефектами наведення.
+ */
 export const MovieCard = ({ movie, isFavorite, onOpen, onToggleWatchlist, t }) => {
     return (
         <Card onClick={() => onOpen(movie)} className={`${s.container} flex flex-col h-full`}>

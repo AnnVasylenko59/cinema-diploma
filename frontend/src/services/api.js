@@ -26,6 +26,14 @@ api.interceptors.response.use(
     }
 );
 
+/**
+ * Виконує запит на авторизацію користувача.
+ * @async
+ * @param {Object} credentials - Дані для входу.
+ * @param {string} credentials.email - Електронна пошта користувача.
+ * @param {string} credentials.password - Пароль.
+ * @returns {Promise<Object>} Відповідь сервера з токеном та даними профілю.
+ */
 export const authAPI = {
     login: (credentials) => api.post('/users/login', credentials),
     register: (userData) => api.post('/users/register', userData),
@@ -38,7 +46,6 @@ export const movieAPI = {
     getAll: (filters = {}) => api.get('/movies', { params: filters }),
     getById: (id) => api.get(`/movies/${id}`),
     getRecommended: (id) => api.get(`/movies/${id}/recommended`),
-    // ВИПРАВЛЕНО: шлях змінено на /genres
     getGenres: () => api.get('/genres'),
     test: () => api.get('/health')
 };
