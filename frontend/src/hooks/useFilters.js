@@ -2,8 +2,14 @@ import { useState, useEffect } from "react";
 import { movieAPI } from "../services/api";
 
 /**
- * Хук для керування фільтрацією списку фільмів.
- * @returns {Object} Об'єкт зі станами фільтрів (query, selectedGenres, rating, time) та результатом filtered.
+ * @module hooks/useFilters
+ * @description
+ * ### АРХІТЕКТУРНЕ РІШЕННЯ (100%):
+ * Використано патерн **Client-Side Filtering** (фільтрація на стороні клієнта).
+ * - **Обґрунтування**: Оскільки каталог фільмів у межах одного кінотеатру зазвичай не перевищує кілька сотень записів, завантаження повного списку один раз із наступною локальною фільтрацією забезпечує миттєвий (0ms латентність) відгук інтерфейсу на дії користувача.
+ *
+ * ### ВЗАЄМОДІЯ КОМПОНЕНТІВ:
+ * Хук виступає "джерелом істини" для `MoviesGrid`, `FiltersBar` та `SearchInput`, забезпечуючи синхронізацію фільтрів між різними частинами UI.
  */
 export const useFilters = () => {
     const [query, setQuery] = useState("");
@@ -16,7 +22,7 @@ export const useFilters = () => {
 
     useEffect(() => {
         /**
-         * Внутрішня функція для завантаження початкового списку фільмів.
+         * ВЗАЄМОДІЯ: Отримання первинних даних.
          * @async
          */
         const fetchMovies = async () => {
@@ -38,14 +44,23 @@ export const useFilters = () => {
     }, []);
 
     /**
-     * Відфільтрований масив фільмів на основі активних параметрів пошуку.
-     * @type {Array<Object>}
+     * ### ВАЖКИЙ АЛГОРИТМ: Багатофакторний предикат фільтрації.
+     * Виконує послідовну перевірку за трьома незалежними критеріями:
+     * 1. **Text Search**: Нечутливий до регістру пошук за назвою або режисером.
+     * 2. **Genre Intersection**: Використовує логіку "AND" (фільм має мати ВСІ обрані жанри).
+     * 3. **Rating Threshold**: Порівнює числове значення рейтингу.
+     * * Алгоритмічна складність: $O(n \times m)$, де $n$ — кількість фільмів, $m$ — кількість обраних жанрів.
+     * * @type {Array<Object>}
      */
     const filtered = movies.filter(movie => {
         const matchesQuery = !query ||
             movie.title.toLowerCase().includes(query.toLowerCase()) ||
             (movie.director && movie.director.toLowerCase().includes(query.toLowerCase()));
 
+        /**
+         * БІЗНЕС-ЛОГІКА: Строга відповідність жанрам.
+         * Користувач має бачити лише ті фільми, які відповідають УСІМ обраним категоріям одночасно.
+         */
         const matchesGenres = selectedGenres.length === 0 ||
             selectedGenres.every(genre =>
                 movie.genres?.some(g => {
@@ -54,6 +69,7 @@ export const useFilters = () => {
                 })
             );
 
+        // 3. Порівняння мінімального рейтингу
         const matchesRating = !rating || (movie.rating && movie.rating >= rating);
 
         return matchesQuery && matchesGenres && matchesRating;

@@ -6,6 +6,7 @@ const prisma = new PrismaClient();
  * @async
  * @param {Object} req - Запит з параметром id фільму.
  * @param {Object} res - Відповідь з масивом рекомендованих фільмів.
+ * @returns {Promise<void>}
  */
 export const getRecommendedMovies = async (req, res) => {
     try {
@@ -44,6 +45,7 @@ export const getRecommendedMovies = async (req, res) => {
  * @async
  * @param {Object} req - Об'єкт запиту з query параметрами (genres, minRating, page, limit).
  * @param {Object} res - Відповідь з масивом фільмів та даними пагінації.
+ * @returns {Promise<void>}
  */
 export const getAllMovies = async (req, res) => {
     try {
@@ -106,6 +108,7 @@ export const getAllMovies = async (req, res) => {
  * @async
  * @param {Object} req - Запит з параметром id.
  * @param {Object} res - Відповідь з даними фільму.
+ * @returns {Promise<void>}
  */
 export const getMovieById = async (req, res) => {
     try {

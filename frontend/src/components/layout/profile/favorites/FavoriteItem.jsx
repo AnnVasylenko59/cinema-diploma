@@ -3,7 +3,7 @@ import { Trash2 } from "lucide-react";
 import { minutesToHMM } from "../../../../utils";
 import { styles } from "./FavoriteStyles";
 
-export const FavoriteItem = ({ movie, onOpen, onRemove, t }) => (
+export const FavoriteItem = ({ movie, onOpen, onRemove}) => (
     <div onClick={() => onOpen(movie)} className={styles.card}>
         <div className={styles.poster}>
             <img src={movie.posterUrl || movie.poster} alt={movie.title} className="w-full h-full object-cover" />

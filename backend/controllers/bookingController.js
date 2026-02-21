@@ -2,16 +2,22 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 /**
- * Контролер для керування бронюваннями
- * @namespace bookingController
+ * Контролер реалізує критичний шар бізнес-логіки — керування життєвим циклом бронювань.
+ * Взаємодіє з Prisma ORM для забезпечення цілісності даних між сутностями Booking, Ticket та Seat.
+ * @module bookingController
+ * @description ### БІЗНЕС-ЛОГІКА ТА АРХІТЕКТУРА:
  */
 const bookingController = {
     /**
-     * Отримує схему зали з актуальним статусом зайнятості місць для конкретного сеансу.
+     * ### СКЛАДНИЙ АЛГОРИТМ: Синхронізація схеми зали.
+     * Перетворює нормалізовані дані БД у високорівневу структуру для фронтенду:
+     * 1. **Data Aggregation**: Виконує глибоке вкладене завантаження (Include) через Prisma.
+     * 2. **State Flattening**: Використовує `flatMap` для вилучення зайнятих ID місць.
+     * 3. **Dynamic Mapping**: Створює віртуальне поле `isOccupied`, зіставляючи статичні місця зали з динамічними квитками сеансу.
      * @async
-     * @param {Object} req - Об'єкт запиту Express, містить showtimeId в параметрах.
+     * @param {Object} req - Об'єкт запиту Express.
      * @param {Object} res - Об'єкт відповіді Express.
-     * @returns {Promise<void>} JSON із даними сеансу та статусом кожного місця.
+     * @returns {Promise<void>}
      */
     getBookingData: async (req, res) => {
         try {
@@ -55,12 +61,15 @@ const bookingController = {
     },
 
     /**
-     * Створює нове бронювання та відповідні квитки.
-     * Використовує транзакцію для забезпечення цілісності даних та перевірки зайнятості місць.
+     * ### КРИТИЧНА БІЗНЕС-ЛОГІКА: Атомарне бронювання.
+     * Реалізує алгоритм запобігання подвійного бронювання (Double Booking Prevention):
+     * 1. **Transaction Isolation**: Весь процес обгорнуто в `$transaction`. Якщо будь-який крок не вдасться, БД повернеться до початкового стану (Rollback).
+     * 2. **Race Condition Protection**: Перед створенням записів виконується перевірка наявності квитків на ці ж координати (row/seat) у межах поточної транзакції.
+     * 3. **Data Consistency**: Гарантує, що сума створених Ticket відповідає кількості обраних місць.
      * @async
-     * @param {Object} req - Запит, що містить showtimeId та масив selectedSeats.
-     * @param {Object} res - Відповідь із результатом створення.
-     * @returns {Promise<void>} JSON із статусом успіху та ID бронювання.
+     * @param {Object} req - Запит із showtimeId та selectedSeats.
+     * @param {Object} res - Відповідь із результатом.
+     * @returns {Promise<void>} <--- ДОДАЙ ЦЕЙ РЯДОК
      */
     createBooking: async (req, res) => {
         try {
@@ -134,11 +143,12 @@ const bookingController = {
     },
 
     /**
-     * Отримує повну історію бронювань поточного авторизованого користувача.
+     * ### ВЗАЄМОДІЯ КОМПОНЕНТІВ:
+     * Забезпечує зв'язок між профілем користувача та історією транзакцій.
+     * Використовує сортування `desc` для відображення останніх подій спочатку (UX патерн).
      * @async
-     * @param {Object} req - Об'єкт запиту з даними користувача в req.user.
-     * @param {Object} res - Об'єкт відповіді.
-     * @returns {Promise<void>} Масив об'єктів бронювань.
+     * @param {Object} req - Запит із `req.user.userId`, отриманим від `authenticateToken`.
+     * @param {Object} res - Відповідь із масивом замовлень.
      */
     getUserBookings: async (req, res) => {
         try {

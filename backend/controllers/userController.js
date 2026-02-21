@@ -10,6 +10,7 @@ const prisma = new PrismaClient();
  * @async
  * @param {Object} req - Запит, що містить login, email, name, password.
  * @param {Object} res - Відповідь із даними створеного користувача.
+ * @returns {Promise<void>}
  */
 const register = async (req, res) => {
     try {
@@ -66,6 +67,7 @@ const register = async (req, res) => {
  * @async
  * @param {Object} req - Запит із логіном та паролем.
  * @param {Object} res - Відповідь із JWT токеном та даними користувача.
+ * @returns {Promise<void>}
  */
 const loginUser = async (req, res) => {
     try {
@@ -120,6 +122,7 @@ const loginUser = async (req, res) => {
  * @async
  * @param {Object} req - Об'єкт запиту з даними з JWT токена.
  * @param {Object} res - Відповідь з публічними даними профілю.
+ * @returns {Promise<void>}
  */
 const getProfile = async (req, res) => {
     try {
@@ -161,6 +164,7 @@ const getProfile = async (req, res) => {
  * @async
  * @param {Object} req - Запит з новими даними профілю.
  * @param {Object} res - Результат оновлення.
+ * @returns {Promise<void>}
  */
 const updateProfile = async (req, res) => {
     try {
@@ -215,6 +219,7 @@ const updateProfile = async (req, res) => {
  * @async
  * @param {Object} req - Запит з параметром login або email.
  * @param {Object} res - Об'єкт з прапорцем available.
+ * @returns {Promise<void>}
  */
 const checkAvailability = async (req, res) => {
     try {

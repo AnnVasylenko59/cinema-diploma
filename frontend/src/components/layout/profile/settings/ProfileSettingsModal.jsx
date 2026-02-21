@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect} from "react";
 import { User, Camera, Save, RefreshCw, ChevronLeft, ZoomIn, ZoomOut, X, Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -24,7 +24,7 @@ export const ProfileSettingsModal = ({ open, onClose, user, onSave, onGoHome }) 
     const [imageSrc, setImageSrc] = useState(null);
     const [crop, setCrop] = useState({ x: 0, y: 0 });
     const [zoom, setZoom] = useState(1);
-    const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+    const [setCroppedAreaPixels] = useState(null);
     const [showCropper, setShowCropper] = useState(false);
 
     useEffect(() => {
