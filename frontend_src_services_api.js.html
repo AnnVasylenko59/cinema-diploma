@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    
+    <meta charset="utf-8">
+    <title>frontend/src/services/api.js - Documentation</title>
+    
+    
+    <script src="scripts/prettify/prettify.js"></script>
+    <script src="scripts/prettify/lang-css.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc.css">
+    <script src="scripts/nav.js" defer></script>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+
+<input type="checkbox" id="nav-trigger" class="nav-trigger" />
+<label for="nav-trigger" class="navicon-button x">
+  <div class="navicon"></div>
+</label>
+
+<label for="nav-trigger" class="overlay"></label>
+
+<nav >
+    
+    
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-bookingController.html">bookingController</a></li><li><a href="module-hooks_useFilters.html">hooks/useFilters</a></li></ul><h3>Global</h3><ul><li><a href="global.html#BookingPage">BookingPage</a></li><li><a href="global.html#HomePage">HomePage</a></li><li><a href="global.html#LoginModal">LoginModal</a></li><li><a href="global.html#MovieCard">MovieCard</a></li><li><a href="global.html#SeatPicker">SeatPicker</a></li><li><a href="global.html#TheatersPage">TheatersPage</a></li><li><a href="global.html#auth">auth</a></li><li><a href="global.html#authAPI">authAPI</a></li><li><a href="global.html#authenticateToken">authenticateToken</a></li><li><a href="global.html#checkAvailability">checkAvailability</a></li><li><a href="global.html#checkDatabaseConnection">checkDatabaseConnection</a></li><li><a href="global.html#classNames">classNames</a></li><li><a href="global.html#fetchCities">fetchCities</a></li><li><a href="global.html#fetchSeats">fetchSeats</a></li><li><a href="global.html#genreAPI">genreAPI</a></li><li><a href="global.html#getAllMovies">getAllMovies</a></li><li><a href="global.html#getMovieById">getMovieById</a></li><li><a href="global.html#getProfile">getProfile</a></li><li><a href="global.html#getRecommendedMovies">getRecommendedMovies</a></li><li><a href="global.html#getShowtimes">getShowtimes</a></li><li><a href="global.html#loadContent">loadContent</a></li><li><a href="global.html#loginUser">loginUser</a></li><li><a href="global.html#minutesToHMM">minutesToHMM</a></li><li><a href="global.html#movieAPI">movieAPI</a></li><li><a href="global.html#register">register</a></li><li><a href="global.html#showtimeAPI">showtimeAPI</a></li><li><a href="global.html#theaterAPI">theaterAPI</a></li><li><a href="global.html#updateProfile">updateProfile</a></li><li><a href="global.html#useAuth">useAuth</a></li><li><a href="global.html#validateEmail">validateEmail</a></li><li><a href="global.html#validatePassword">validatePassword</a></li><li><a href="global.html#validateRating">validateRating</a></li><li><a href="global.html#validateUsername">validateUsername</a></li><li><a href="global.html#watchlistAPI">watchlistAPI</a></li></ul>
+    
+</nav>
+
+<div id="main">
+    
+    <h1 class="page-title">frontend/src/services/api.js</h1>
+    
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import axios from 'axios';
+
+const API_BASE_URL = 'http://localhost:5000/api';
+
+const api = axios.create({
+    baseURL: API_BASE_URL,
+    timeout: 5000,
+});
+
+api.interceptors.request.use(
+    (config) => {
+        const token = localStorage.getItem('authToken');
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+    },
+    (error) => Promise.reject(error)
+);
+
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.code === 'ECONNABORTED') console.error('⏰ API Timeout');
+        return Promise.reject(error);
+    }
+);
+
+/**
+ * Об'єкт для роботи з авторизацією та профілем.
+ */
+export const authAPI = {
+    /**
+     * @async
+     * @param {Object} credentials - Дані користувача (login/email, password).
+     * @returns {Promise&lt;Object>} Токен та дані профілю.
+     */
+    login: (credentials) => api.post('/users/login', credentials),
+    /**
+     * @async
+     * @param {Object} userData - Дані для нового користувача.
+     * @returns {Promise&lt;Object>} Створений профіль.
+     */
+    register: (userData) => api.post('/users/register', userData),
+    /**
+     * @async
+     * @returns {Promise&lt;Object>} Дані поточного профілю.
+     */
+    getProfile: () => api.get('/users/profile'),
+    /**
+     * @async
+     * @param {Object} userData - Нові дані для оновлення.
+     * @returns {Promise&lt;Object>} Оновлений об'єкт користувача.
+     */
+    updateProfile: (userData) => api.put('/users/profile', userData),
+    /**
+     * @async
+     * @param {Object} params - login або email для перевірки.
+     * @returns {Promise&lt;Object>} Статус доступності.
+     */
+    checkAvailability: (params) => api.get('/users/check', { params }),
+};
+
+/**
+ * Об'єкт для роботи з каталогом фільмів.
+ */
+export const movieAPI = {
+    /**
+     * @async
+     * @param {Object} [filters] - Фільтри пошуку та жанри.
+     * @returns {Promise&lt;Object>} Список фільмів.
+     */
+    getAll: (filters = {}) => api.get('/movies', { params: filters }),
+    /**
+     * @async
+     * @param {number|string} id - Унікальний ID фільму.
+     * @returns {Promise&lt;Object>} Деталі фільму.
+     */
+    getById: (id) => api.get(`/movies/${id}`),
+    /**
+     * @async
+     * @param {number|string} id - ID фільму.
+     * @returns {Promise&lt;Object>} Схожі фільми.
+     */
+    getRecommended: (id) => api.get(`/movies/${id}/recommended`),
+    /**
+     * @async
+     * @returns {Promise&lt;Object>} Список жанрів.
+     */
+    getGenres: () => api.get('/genres'),
+    /**
+     * @async
+     * @returns {Promise&lt;Object>} Статус здоров'я API.
+     */
+    test: () => api.get('/health')
+};
+
+/**
+ * Об'єкт API для роботи з жанрами фільмів.
+ */
+export const genreAPI = {
+    /**
+     * Отримує повний перелік доступних жанрів із бази даних.
+     * @async
+     * @returns {Promise&lt;Object>} Список об'єктів жанрів.
+     */
+    getAll: () => api.get('/genres'),
+};
+
+/**
+ * Об'єкт API для роботи з сеансами.
+ */
+export const showtimeAPI = {
+    /**
+     * @async
+     * @param {Object} [filters={}] - Параметри (movieId, date, cityId).
+     * @returns {Promise&lt;Object>} Масив сеансів.
+     */
+    getShowtimes: (filters = {}) => api.get('/showtimes', { params: filters }),
+};
+
+/**
+ * Об'єкт API для роботи з кінотеатрами та містами.
+ */
+export const theaterAPI = {
+    /**
+     * @async
+     * @param {Object} [filters={}] - Фільтр за cityId.
+     * @returns {Promise&lt;Object>} Список кінотеатрів.
+     */
+    getAll: (filters = {}) => api.get('/theaters', { params: filters }),
+    /**
+     * @async
+     * @returns {Promise&lt;Object>} Масив назв доступних міст.
+     */
+    getCities: () => api.get('/theaters/cities'),
+};
+
+/**
+ * Об'єкт API для керування списком бажаного.
+ */
+export const watchlistAPI = {
+    /**
+     * @async
+     * @returns {Promise&lt;Object>} Список фільмів у черзі перегляду користувача.
+     */
+    get: () => api.get('/watchlist'),
+    /**
+     * @async
+     * @param {number|string} movieId - ID фільму.
+     * @returns {Promise&lt;Object>} Статус додавання або видалення.
+     */
+    toggle: (movieId) => api.post('/watchlist/toggle', { movieId }),
+};
+
+export default api;</code></pre>
+        </article>
+    </section>
+
+
+
+
+    
+    
+</div>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Sat Feb 21 2026 19:54:18 GMT+0000 (Coordinated Universal Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+</footer>
+
+<script>prettyPrint();</script>
+<script src="scripts/polyfill.js"></script>
+<script src="scripts/linenumber.js"></script>
+
+
+
+</body>
+</html>

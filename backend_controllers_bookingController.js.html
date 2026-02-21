@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    
+    <meta charset="utf-8">
+    <title>backend/controllers/bookingController.js - Documentation</title>
+    
+    
+    <script src="scripts/prettify/prettify.js"></script>
+    <script src="scripts/prettify/lang-css.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc.css">
+    <script src="scripts/nav.js" defer></script>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+
+<input type="checkbox" id="nav-trigger" class="nav-trigger" />
+<label for="nav-trigger" class="navicon-button x">
+  <div class="navicon"></div>
+</label>
+
+<label for="nav-trigger" class="overlay"></label>
+
+<nav >
+    
+    
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-bookingController.html">bookingController</a></li><li><a href="module-hooks_useFilters.html">hooks/useFilters</a></li></ul><h3>Global</h3><ul><li><a href="global.html#BookingPage">BookingPage</a></li><li><a href="global.html#HomePage">HomePage</a></li><li><a href="global.html#LoginModal">LoginModal</a></li><li><a href="global.html#MovieCard">MovieCard</a></li><li><a href="global.html#SeatPicker">SeatPicker</a></li><li><a href="global.html#TheatersPage">TheatersPage</a></li><li><a href="global.html#auth">auth</a></li><li><a href="global.html#authAPI">authAPI</a></li><li><a href="global.html#authenticateToken">authenticateToken</a></li><li><a href="global.html#checkAvailability">checkAvailability</a></li><li><a href="global.html#checkDatabaseConnection">checkDatabaseConnection</a></li><li><a href="global.html#classNames">classNames</a></li><li><a href="global.html#fetchCities">fetchCities</a></li><li><a href="global.html#fetchSeats">fetchSeats</a></li><li><a href="global.html#genreAPI">genreAPI</a></li><li><a href="global.html#getAllMovies">getAllMovies</a></li><li><a href="global.html#getMovieById">getMovieById</a></li><li><a href="global.html#getProfile">getProfile</a></li><li><a href="global.html#getRecommendedMovies">getRecommendedMovies</a></li><li><a href="global.html#getShowtimes">getShowtimes</a></li><li><a href="global.html#loadContent">loadContent</a></li><li><a href="global.html#loginUser">loginUser</a></li><li><a href="global.html#minutesToHMM">minutesToHMM</a></li><li><a href="global.html#movieAPI">movieAPI</a></li><li><a href="global.html#register">register</a></li><li><a href="global.html#showtimeAPI">showtimeAPI</a></li><li><a href="global.html#theaterAPI">theaterAPI</a></li><li><a href="global.html#updateProfile">updateProfile</a></li><li><a href="global.html#useAuth">useAuth</a></li><li><a href="global.html#validateEmail">validateEmail</a></li><li><a href="global.html#validatePassword">validatePassword</a></li><li><a href="global.html#validateRating">validateRating</a></li><li><a href="global.html#validateUsername">validateUsername</a></li><li><a href="global.html#watchlistAPI">watchlistAPI</a></li></ul>
+    
+</nav>
+
+<div id="main">
+    
+    <h1 class="page-title">backend/controllers/bookingController.js</h1>
+    
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+
+/**
+ * Контролер реалізує критичний шар бізнес-логіки — керування життєвим циклом бронювань.
+ * Взаємодіє з Prisma ORM для забезпечення цілісності даних між сутностями Booking, Ticket та Seat.
+ * @module bookingController
+ * @description ### БІЗНЕС-ЛОГІКА ТА АРХІТЕКТУРА:
+ */
+const bookingController = {
+    /**
+     * ### СКЛАДНИЙ АЛГОРИТМ: Синхронізація схеми зали.
+     * Перетворює нормалізовані дані БД у високорівневу структуру для фронтенду:
+     * 1. **Data Aggregation**: Виконує глибоке вкладене завантаження (Include) через Prisma.
+     * 2. **State Flattening**: Використовує `flatMap` для вилучення зайнятих ID місць.
+     * 3. **Dynamic Mapping**: Створює віртуальне поле `isOccupied`, зіставляючи статичні місця зали з динамічними квитками сеансу.
+     * @async
+     * @param {Object} req - Об'єкт запиту Express.
+     * @param {Object} res - Об'єкт відповіді Express.
+     * @returns {Promise&lt;void>}
+     */
+    getBookingData: async (req, res) => {
+        try {
+            const { showtimeId } = req.params;
+            const sId = parseInt(showtimeId);
+
+            if (isNaN(sId)) return res.status(400).json({ error: 'Некоректний ID сеансу' });
+
+            const showtime = await prisma.showtime.findUnique({
+                where: { id: sId },
+                include: {
+                    movie: true,
+                    hall: { include: { theater: true, seats: true } },
+                    bookings: {
+                        include: {
+                            tickets: { select: { seatId: true } }
+                        }
+                    }
+                }
+            });
+
+            if (!showtime) return res.status(404).json({ message: 'Сеанс не знайдено' });
+
+            const occupiedSeatIds = showtime.bookings.flatMap(booking =>
+                booking.tickets.map(ticket => ticket.seatId)
+            );
+
+            const seatsWithStatus = showtime.hall.seats.map(seat => ({
+                ...seat,
+                isOccupied: occupiedSeatIds.includes(seat.id)
+            }));
+
+            res.json({
+                ...showtime,
+                hall: { ...showtime.hall, seats: seatsWithStatus }
+            });
+        } catch (error) {
+            console.error('Fetch booking data error:', error);
+            res.status(500).json({ message: 'Помилка сервера при завантаженні зали' });
+        }
+    },
+
+    /**
+     * ### КРИТИЧНА БІЗНЕС-ЛОГІКА: Атомарне бронювання.
+     * Реалізує алгоритм запобігання подвійного бронювання (Double Booking Prevention):
+     * 1. **Transaction Isolation**: Весь процес обгорнуто в `$transaction`. Якщо будь-який крок не вдасться, БД повернеться до початкового стану (Rollback).
+     * 2. **Race Condition Protection**: Перед створенням записів виконується перевірка наявності квитків на ці ж координати (row/seat) у межах поточної транзакції.
+     * 3. **Data Consistency**: Гарантує, що сума створених Ticket відповідає кількості обраних місць.
+     * @async
+     * @param {Object} req - Запит із showtimeId та selectedSeats.
+     * @param {Object} res - Відповідь із результатом.
+     * @returns {Promise&lt;void>} &lt;--- ДОДАЙ ЦЕЙ РЯДОК
+     */
+    createBooking: async (req, res) => {
+        try {
+            const { showtimeId, selectedSeats } = req.body;
+            const userId = req.user.userId;
+
+            if (!showtimeId || !selectedSeats || selectedSeats.length === 0) {
+                return res.status(400).json({ error: 'Місця не обрано' });
+            }
+
+            const showtime = await prisma.showtime.findUnique({
+                where: { id: parseInt(showtimeId) },
+                select: { id: true, price: true, hallId: true }
+            });
+
+            if (!showtime) return res.status(404).json({ error: 'Сеанс не знайдено' });
+
+            const result = await prisma.$transaction(async (tx) => {
+                const alreadyTakenTickets = await tx.ticket.findMany({
+                    where: {
+                        booking: { showtimeId: showtime.id },
+                        seat: {
+                            OR: selectedSeats.map(key => {
+                                const [r, n] = key.split('-').map(Number);
+                                return { rowNum: r, seatNum: n, hallId: showtime.hallId };
+                            })
+                        }
+                    }
+                });
+
+                if (alreadyTakenTickets.length > 0) {
+                    throw new Error('Деякі з обраних місць уже заброньовані іншим користувачем');
+                }
+
+                const booking = await tx.booking.create({
+                    data: {
+                        userId: userId,
+                        showtimeId: showtime.id,
+                    }
+                });
+
+                for (const seatKey of selectedSeats) {
+                    const [row, num] = seatKey.split('-').map(Number);
+
+                    const seat = await tx.seat.findFirst({
+                        where: {
+                            hallId: showtime.hallId,
+                            rowNum: row,
+                            seatNum: num
+                        }
+                    });
+
+                    if (seat) {
+                        await tx.ticket.create({
+                            data: {
+                                bookingId: booking.id,
+                                seatId: seat.id,
+                                price: showtime.price
+                            }
+                        });
+                    }
+                }
+                return booking;
+            });
+
+            res.status(201).json({ success: true, bookingId: result.id });
+        } catch (error) {
+            console.error('Transaction failed:', error.message);
+            res.status(500).json({ error: error.message || 'Помилка при збереженні бронювання' });
+        }
+    },
+
+    /**
+     * ### ВЗАЄМОДІЯ КОМПОНЕНТІВ:
+     * Забезпечує зв'язок між профілем користувача та історією транзакцій.
+     * Використовує сортування `desc` для відображення останніх подій спочатку (UX патерн).
+     * @async
+     * @param {Object} req - Запит із `req.user.userId`, отриманим від `authenticateToken`.
+     * @param {Object} res - Відповідь із масивом замовлень.
+     */
+    getUserBookings: async (req, res) => {
+        try {
+            const bookings = await prisma.booking.findMany({
+                where: { userId: req.user.userId },
+                include: {
+                    showtime: {
+                        include: {
+                            movie: true,
+                            hall: { include: { theater: true } }
+                        }
+                    },
+                    tickets: {
+                        include: { seat: true }
+                    }
+                },
+                orderBy: { createdAt: 'desc' }
+            });
+            res.json(bookings);
+        } catch (error) {
+            console.error('History fetch error:', error);
+            res.status(500).json({ error: 'Помилка завантаження історії бронювань' });
+        }
+    }
+};
+
+module.exports = bookingController;</code></pre>
+        </article>
+    </section>
+
+
+
+
+    
+    
+</div>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Sat Feb 21 2026 19:54:18 GMT+0000 (Coordinated Universal Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+</footer>
+
+<script>prettyPrint();</script>
+<script src="scripts/polyfill.js"></script>
+<script src="scripts/linenumber.js"></script>
+
+
+
+</body>
+</html>

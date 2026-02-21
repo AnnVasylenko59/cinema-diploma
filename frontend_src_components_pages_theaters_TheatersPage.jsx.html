@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    
+    <meta charset="utf-8">
+    <title>frontend/src/components/pages/theaters/TheatersPage.jsx - Documentation</title>
+    
+    
+    <script src="scripts/prettify/prettify.js"></script>
+    <script src="scripts/prettify/lang-css.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc.css">
+    <script src="scripts/nav.js" defer></script>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+
+<input type="checkbox" id="nav-trigger" class="nav-trigger" />
+<label for="nav-trigger" class="navicon-button x">
+  <div class="navicon"></div>
+</label>
+
+<label for="nav-trigger" class="overlay"></label>
+
+<nav >
+    
+    
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-bookingController.html">bookingController</a></li><li><a href="module-hooks_useFilters.html">hooks/useFilters</a></li></ul><h3>Global</h3><ul><li><a href="global.html#BookingPage">BookingPage</a></li><li><a href="global.html#HomePage">HomePage</a></li><li><a href="global.html#LoginModal">LoginModal</a></li><li><a href="global.html#MovieCard">MovieCard</a></li><li><a href="global.html#SeatPicker">SeatPicker</a></li><li><a href="global.html#TheatersPage">TheatersPage</a></li><li><a href="global.html#auth">auth</a></li><li><a href="global.html#authAPI">authAPI</a></li><li><a href="global.html#authenticateToken">authenticateToken</a></li><li><a href="global.html#checkAvailability">checkAvailability</a></li><li><a href="global.html#checkDatabaseConnection">checkDatabaseConnection</a></li><li><a href="global.html#classNames">classNames</a></li><li><a href="global.html#fetchCities">fetchCities</a></li><li><a href="global.html#fetchSeats">fetchSeats</a></li><li><a href="global.html#genreAPI">genreAPI</a></li><li><a href="global.html#getAllMovies">getAllMovies</a></li><li><a href="global.html#getMovieById">getMovieById</a></li><li><a href="global.html#getProfile">getProfile</a></li><li><a href="global.html#getRecommendedMovies">getRecommendedMovies</a></li><li><a href="global.html#getShowtimes">getShowtimes</a></li><li><a href="global.html#loadContent">loadContent</a></li><li><a href="global.html#loginUser">loginUser</a></li><li><a href="global.html#minutesToHMM">minutesToHMM</a></li><li><a href="global.html#movieAPI">movieAPI</a></li><li><a href="global.html#register">register</a></li><li><a href="global.html#showtimeAPI">showtimeAPI</a></li><li><a href="global.html#theaterAPI">theaterAPI</a></li><li><a href="global.html#updateProfile">updateProfile</a></li><li><a href="global.html#useAuth">useAuth</a></li><li><a href="global.html#validateEmail">validateEmail</a></li><li><a href="global.html#validatePassword">validatePassword</a></li><li><a href="global.html#validateRating">validateRating</a></li><li><a href="global.html#validateUsername">validateUsername</a></li><li><a href="global.html#watchlistAPI">watchlistAPI</a></li></ul>
+    
+</nav>
+
+<div id="main">
+    
+    <h1 class="page-title">frontend/src/components/pages/theaters/TheatersPage.jsx</h1>
+    
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import React, { useState, useEffect, useRef, useCallback } from "react";
+import {
+    MapPin, Film, ChevronDown, Star,
+    Search
+} from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
+
+import { PageHeader } from "../PageHeader";
+import { LoadingState } from "../LoadingState.jsx";
+import { EmptyState } from "../../ui/EmptyState.jsx";
+import { ErrorState } from "../../ui/ErrorState.jsx";
+import { MovieCard } from "../../movies/grid/MovieCard";
+
+import { CalendarPicker } from "./CalendarPicker";
+import { TheatersMap } from "./TheatersMap";
+import { showtimeAPI, theaterAPI, movieAPI } from "../../../services/api";
+
+/**
+ * Сторінка вибору кінотеатру та часу сеансу для конкретного фільму.
+ * @component
+ * @param {Object} props - Властивості компонента.
+ * @param {Object} props.currentMovie - Об'єкт поточного обраного фільму.
+ * @param {Function} props.setStep - Навігація між кроками.
+ * @param {Function} props.onPickShowtime - Коллбек вибору сеансу.
+ * @param {Function} props.onOpenMovie - Коллбек відкриття деталей рекомендованого фільму.
+ * @param {string} props.selectedDate - Обрана дата у форматі ISO.
+ * @param {Function} props.setSelectedDate - Зміна дати.
+ * @param {Object} props.selectedCity - Обране місто.
+ * @param {Function} props.setSelectedCity - Зміна міста.
+ * @returns {JSX.Element} Сторінка з картою кінотеатрів та рекомендованими фільмами.
+ */
+export const TheatersPage = ({
+                                 currentMovie: propMovie,
+                                 setStep,
+                                 onPickShowtime,
+                                 onOpenMovie,
+                                 selectedDate,
+                                 setSelectedDate,
+                                 selectedCity,
+                                 setSelectedCity
+                             }) => {
+    const { t, i18n } = useTranslation();
+    const currentLocale = i18n.language === 'en' ? 'en-US' : 'uk-UA';
+    const todayStr = new Date().toISOString().split("T")[0];
+
+    const [viewDate, setViewDate] = useState(new Date(selectedDate));
+    const [showtimes, setShowtimes] = useState([]);
+    const [theaters, setTheaters] = useState([]);
+    const [cities, setCities] = useState([]);
+    const [recommended, setRecommended] = useState([]);
+    const [nextDate, setNextDate] = useState(null);
+
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(false);
+
+    const [isCityOpen, setIsCityOpen] = useState(false);
+    const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+    const calendarRef = useRef(null);
+
+    /**
+     * Отримує список міст із сервера.
+     * @async
+     * @function fetchCities
+     * @returns {Promise&lt;Object>} Обране або перше доступне місто.
+     */
+    const fetchCities = useCallback(async () => {
+        try {
+            const res = await theaterAPI.getCities();
+            const data = res.data.cities || res.data;
+            setCities(data);
+            if (data.length > 0 &amp;&amp; !selectedCity) {
+                setSelectedCity(data[0]);
+                return data[0];
+            }
+            return selectedCity;
+        } catch (e) {
+            console.error("Cities load error:", e);
+            throw e;
+        }
+    }, [selectedCity, setSelectedCity]);
+
+    /**
+     * Завантажує сеанси, кінотеатри та рекомендації для обраного міста.
+     * @async
+     * @function loadContent
+     * @param {Object} city - Об'єкт міста, для якого завантажується контент.
+     * @returns {Promise&lt;void>}
+     */
+    const loadContent = useCallback(async (city = selectedCity) => {
+        if (!propMovie) {
+            setIsLoading(false);
+            return;
+        }
+
+        if (!city) return;
+
+        try {
+            const [showRes, theaterRes, recRes] = await Promise.all([
+                showtimeAPI.getShowtimes({
+                    movieId: propMovie.id,
+                    date: selectedDate,
+                    cityId: city.id
+                }),
+                theaterAPI.getAll({ cityId: city.id }),
+                movieAPI.getRecommended(propMovie.id)
+            ]);
+
+            const now = new Date();
+            const filteredShowtimes = (showRes.data || []).filter(st => {
+                return new Date(st.startTime) > now;
+            });
+
+            setShowtimes(filteredShowtimes);
+            setTheaters(theaterRes.data.theaters || theaterRes.data || []);
+            setRecommended(recRes.data || []);
+
+            if (filteredShowtimes.length === 0) {
+                const allFutureRes = await showtimeAPI.getShowtimes({
+                    movieId: propMovie.id,
+                    cityId: city.id
+                });
+
+                const futureDates = (allFutureRes.data || [])
+                    .filter(st => new Date(st.startTime) > now)
+                    .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+
+                setNextDate(futureDates.length > 0 ? new Date(futureDates[0].startTime) : null);
+            } else {
+                setNextDate(null);
+            }
+
+            setError(false);
+        } catch (e) { // ВИПРАВЛЕНО: додано (e), бо змінна використовується нижче
+            console.error("Content load error:", e);
+            setError(true);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [propMovie, selectedDate, selectedCity]);
+
+    const handleGoToDate = useCallback((date) => {
+        const dateStr = date.toISOString().split('T')[0];
+        setSelectedDate(dateStr);
+        setViewDate(date);
+    }, [setSelectedDate]);
+
+    useEffect(() => {
+        const init = async () => {
+            setIsLoading(true);
+            try {
+                const city = await fetchCities();
+                await loadContent(city);
+            } catch { // ВИПРАВЛЕНО: видалено (e), бо вона тут не використовується
+                setError(true);
+                setIsLoading(false);
+            }
+        };
+        init();
+    }, [fetchCities, loadContent]);
+
+    useEffect(() => {
+        if (!isLoading &amp;&amp; !error) {
+            loadContent();
+        }
+    }, [selectedDate, selectedCity?.id, loadContent, isLoading, error]);
+
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (calendarRef.current &amp;&amp; !calendarRef.current.contains(e.target)) {
+                setIsCalendarOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    if (error) return &lt;ErrorState onRetry={() => window.location.reload()} onBack={() => setStep("home")} />;
+
+    if (!propMovie &amp;&amp; !isLoading) {
+        return (
+            &lt;EmptyState
+                variant="dashed"
+                icon={Search}
+                title={t('theaters.no_movie_title')}
+                description={t('theaters.no_movie_text')}
+                onAction={() => setStep("home")}
+                actionLabel={t('theaters.back_home')}
+            />
+        );
+    }
+
+    if (isLoading) return &lt;LoadingState label={t('theaters.sync')} />;
+
+    return (
+        &lt;div className="space-y-8 pb-20">
+            &lt;PageHeader
+                title={propMovie?.title || ""}
+                subtitle={t('theaters.currently_selected')}
+                icon={Film}
+                iconBg="bg-red-500"
+                onBack={() => setStep("home")}
+                backLabel={t('theaters.back_home')}
+            />
+
+            &lt;div className="flex flex-wrap items-center gap-3">
+                &lt;div className="relative">
+                    &lt;button
+                        onClick={() => setIsCityOpen(!isCityOpen)}
+                        className="flex items-center gap-3 bg-white px-8 py-4 rounded-[1.8rem] border border-slate-100 shadow-sm font-black text-slate-900 uppercase tracking-tighter hover:border-blue-400 active:scale-[0.98] transition-all"
+                    >
+                        &lt;MapPin size={18} className="text-red-500" /> {selectedCity?.name || t('common.select_city')}
+                        &lt;ChevronDown size={14} className={`ml-2 transition-transform duration-300 ${isCityOpen ? 'rotate-180' : 'opacity-30'}`} />
+                    &lt;/button>
+
+                    &lt;AnimatePresence>
+                        {isCityOpen &amp;&amp; (
+                            &lt;motion.div
+                                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
+                                className="absolute top-full left-0 mt-3 w-56 bg-white rounded-[2rem] shadow-2xl border border-slate-50 p-3 z-[120]"
+                            >
+                                {cities.map(c => (
+                                    &lt;button
+                                        key={c.id}
+                                        onClick={() => { setSelectedCity(c); setIsCityOpen(false); }}
+                                        className="w-full text-left px-5 py-3 hover:bg-blue-600 hover:text-white rounded-2xl text-xs font-black uppercase transition-all mb-1 active:scale-95"
+                                    >
+                                        {c.name}
+                                    &lt;/button>
+                                ))}
+                            &lt;/motion.div>
+                        )}
+                    &lt;/AnimatePresence>
+                &lt;/div>
+
+                &lt;CalendarPicker
+                    isOpen={isCalendarOpen}
+                    setIsOpen={setIsCalendarOpen}
+                    selectedDate={selectedDate}
+                    setSelectedDate={setSelectedDate}
+                    viewDate={viewDate}
+                    setViewDate={setViewDate}
+                    todayStr={todayStr}
+                    currentLocale={currentLocale}
+                    t={t}
+                    calendarRef={calendarRef}
+                />
+            &lt;/div>
+
+            &lt;TheatersMap
+                key={`${selectedCity?.id}-${selectedDate}`}
+                theaters={theaters}
+                showtimes={showtimes}
+                selectedCity={selectedCity}
+                onPickShowtime={onPickShowtime}
+                nextDate={nextDate}
+                onGoToDate={handleGoToDate}
+            />
+
+            &lt;section className="space-y-8 pt-6">
+                &lt;h4 className="text-2xl font-black uppercase tracking-tighter text-slate-900 px-2 flex items-center gap-3">
+                    &lt;Star className="text-yellow-400" fill="currentColor" /> {t('theaters.recommended')}
+                &lt;/h4>
+
+                &lt;div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                    {recommended.map((m) => (
+                        &lt;MovieCard
+                            key={m.id}
+                            movie={m}
+                            t={t}
+                            onOpen={onOpenMovie}
+                        />
+                    ))}
+                &lt;/div>
+            &lt;/section>
+        &lt;/div>
+    );
+};</code></pre>
+        </article>
+    </section>
+
+
+
+
+    
+    
+</div>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Sat Feb 21 2026 19:54:18 GMT+0000 (Coordinated Universal Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+</footer>
+
+<script>prettyPrint();</script>
+<script src="scripts/polyfill.js"></script>
+<script src="scripts/linenumber.js"></script>
+
+
+
+</body>
+</html>

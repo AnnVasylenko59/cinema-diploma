@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    
+    <meta charset="utf-8">
+    <title>frontend/src/hooks/useAuth.js - Documentation</title>
+    
+    
+    <script src="scripts/prettify/prettify.js"></script>
+    <script src="scripts/prettify/lang-css.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc.css">
+    <script src="scripts/nav.js" defer></script>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+
+<input type="checkbox" id="nav-trigger" class="nav-trigger" />
+<label for="nav-trigger" class="navicon-button x">
+  <div class="navicon"></div>
+</label>
+
+<label for="nav-trigger" class="overlay"></label>
+
+<nav >
+    
+    
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-bookingController.html">bookingController</a></li><li><a href="module-hooks_useFilters.html">hooks/useFilters</a></li></ul><h3>Global</h3><ul><li><a href="global.html#BookingPage">BookingPage</a></li><li><a href="global.html#HomePage">HomePage</a></li><li><a href="global.html#LoginModal">LoginModal</a></li><li><a href="global.html#MovieCard">MovieCard</a></li><li><a href="global.html#SeatPicker">SeatPicker</a></li><li><a href="global.html#TheatersPage">TheatersPage</a></li><li><a href="global.html#auth">auth</a></li><li><a href="global.html#authAPI">authAPI</a></li><li><a href="global.html#authenticateToken">authenticateToken</a></li><li><a href="global.html#checkAvailability">checkAvailability</a></li><li><a href="global.html#checkDatabaseConnection">checkDatabaseConnection</a></li><li><a href="global.html#classNames">classNames</a></li><li><a href="global.html#fetchCities">fetchCities</a></li><li><a href="global.html#fetchSeats">fetchSeats</a></li><li><a href="global.html#genreAPI">genreAPI</a></li><li><a href="global.html#getAllMovies">getAllMovies</a></li><li><a href="global.html#getMovieById">getMovieById</a></li><li><a href="global.html#getProfile">getProfile</a></li><li><a href="global.html#getRecommendedMovies">getRecommendedMovies</a></li><li><a href="global.html#getShowtimes">getShowtimes</a></li><li><a href="global.html#loadContent">loadContent</a></li><li><a href="global.html#loginUser">loginUser</a></li><li><a href="global.html#minutesToHMM">minutesToHMM</a></li><li><a href="global.html#movieAPI">movieAPI</a></li><li><a href="global.html#register">register</a></li><li><a href="global.html#showtimeAPI">showtimeAPI</a></li><li><a href="global.html#theaterAPI">theaterAPI</a></li><li><a href="global.html#updateProfile">updateProfile</a></li><li><a href="global.html#useAuth">useAuth</a></li><li><a href="global.html#validateEmail">validateEmail</a></li><li><a href="global.html#validatePassword">validatePassword</a></li><li><a href="global.html#validateRating">validateRating</a></li><li><a href="global.html#validateUsername">validateUsername</a></li><li><a href="global.html#watchlistAPI">watchlistAPI</a></li></ul>
+    
+</nav>
+
+<div id="main">
+    
+    <h1 class="page-title">frontend/src/hooks/useAuth.js</h1>
+    
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import { useState, useEffect } from "react";
+import { authAPI } from "../services/api";
+import api from "../services/api";
+import i18n from '../core/i18n.js';
+
+/**
+ * Кастомний хук для керування станом аутентифікації користувача.
+ * @returns {Object} Об'єкт зі станом (user, loading, error) та функціями (login, register, logout, updateUser).
+ */
+export const useAuth = () => {
+    const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        const token = localStorage.getItem("authToken");
+        const userData = localStorage.getItem("userData");
+
+        if (token &amp;&amp; userData) {
+            try {
+                const parsedUser = JSON.parse(userData);
+                setUser(parsedUser);
+                api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+                if (parsedUser.language) {
+                    const langCode = parsedUser.language === 'English' ? 'en' : 'uk';
+                    i18n.changeLanguage(langCode);
+                }
+            } catch (e) {
+                console.error("Помилка парсингу даних користувача:", e);
+                logout();
+            }
+        }
+    }, []);
+
+    /**
+     * Оновлює дані користувача в локальному стані та LocalStorage.
+     * @param {Object} updatedData - Новий об'єкт даних користувача.
+     * @returns {void}
+     */
+    const updateUser = (updatedData) => {
+        if (!updatedData) return;
+
+        setUser(updatedData);
+
+        if (updatedData.language) {
+            const langCode = updatedData.language === 'English' ? 'en' : 'uk';
+            i18n.changeLanguage(langCode);
+        }
+
+        try {
+            localStorage.setItem("userData", JSON.stringify(updatedData));
+        } catch (e) {
+            console.warn("LocalStorage переповнений. Збережено лише в сесії.", e);
+            try {
+                const lightweightData = { ...updatedData, avatar: null };
+                localStorage.setItem("userData", JSON.stringify(lightweightData));
+            } catch (innerError) {
+                console.error("Критична помилка сховища:", innerError);
+            }
+        }
+    };
+
+    /**
+     * Виконує вхід користувача в систему.
+     * @async
+     * @param {Object} credentials - Логін та пароль.
+     * @returns {Promise&lt;Object>} Об'єкт результату з success та даними користувача або помилкою.
+     */
+    const login = async (credentials) => {
+        setLoading(true);
+        setError(null);
+        try {
+            const response = await authAPI.login(credentials);
+            const { user: userData, token } = response.data;
+
+            localStorage.setItem("authToken", token);
+            localStorage.setItem("userData", JSON.stringify(userData));
+            api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+            if (userData.language) {
+                const langCode = userData.language === 'English' ? 'en' : 'uk';
+                i18n.changeLanguage(langCode);
+            }
+
+            setUser(userData);
+            return { success: true, user: userData };
+        } catch (error) {
+            const errorMessage = error.response?.data?.error || "Помилка авторизації";
+            setError(errorMessage);
+            return { success: false, error: errorMessage };
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    /**
+     * Реєструє нового користувача.
+     * @async
+     * @param {Object} userData - Дані профілю для реєстрації.
+     * @returns {Promise&lt;Object>} Об'єкт результату успіху або помилки.
+     */
+    const register = async (userData) => {
+        setLoading(true);
+        setError(null);
+        try {
+            const response = await authAPI.register(userData);
+            const { user: newUser, token } = response.data;
+
+            localStorage.setItem("authToken", token);
+            localStorage.setItem("userData", JSON.stringify(newUser));
+            api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+
+            setUser(newUser);
+            return { success: true, user: newUser };
+        } catch (error) {
+            const errorMessage = error.response?.data?.error || "Помилка реєстрації";
+            setError(errorMessage);
+            return { success: false, error: errorMessage };
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    /**
+     * Очищує дані сесії та виходить із системи.
+     * @returns {void}
+     */
+    const logout = () => {
+        setUser(null);
+        setError(null);
+        localStorage.removeItem("authToken");
+        localStorage.removeItem("userData");
+        delete api.defaults.headers.common['Authorization'];
+        i18n.changeLanguage('uk');
+    };
+
+    return {
+        user, login, register, updateUser, logout, loading, error, isAuthenticated: !!user
+    };
+};</code></pre>
+        </article>
+    </section>
+
+
+
+
+    
+    
+</div>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Sat Feb 21 2026 19:54:18 GMT+0000 (Coordinated Universal Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+</footer>
+
+<script>prettyPrint();</script>
+<script src="scripts/polyfill.js"></script>
+<script src="scripts/linenumber.js"></script>
+
+
+
+</body>
+</html>

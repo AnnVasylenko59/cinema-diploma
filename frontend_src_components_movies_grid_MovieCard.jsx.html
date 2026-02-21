@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    
+    <meta charset="utf-8">
+    <title>frontend/src/components/movies/grid/MovieCard.jsx - Documentation</title>
+    
+    
+    <script src="scripts/prettify/prettify.js"></script>
+    <script src="scripts/prettify/lang-css.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc.css">
+    <script src="scripts/nav.js" defer></script>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+
+<input type="checkbox" id="nav-trigger" class="nav-trigger" />
+<label for="nav-trigger" class="navicon-button x">
+  <div class="navicon"></div>
+</label>
+
+<label for="nav-trigger" class="overlay"></label>
+
+<nav >
+    
+    
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-bookingController.html">bookingController</a></li><li><a href="module-hooks_useFilters.html">hooks/useFilters</a></li></ul><h3>Global</h3><ul><li><a href="global.html#BookingPage">BookingPage</a></li><li><a href="global.html#HomePage">HomePage</a></li><li><a href="global.html#LoginModal">LoginModal</a></li><li><a href="global.html#MovieCard">MovieCard</a></li><li><a href="global.html#SeatPicker">SeatPicker</a></li><li><a href="global.html#TheatersPage">TheatersPage</a></li><li><a href="global.html#auth">auth</a></li><li><a href="global.html#authAPI">authAPI</a></li><li><a href="global.html#authenticateToken">authenticateToken</a></li><li><a href="global.html#checkAvailability">checkAvailability</a></li><li><a href="global.html#checkDatabaseConnection">checkDatabaseConnection</a></li><li><a href="global.html#classNames">classNames</a></li><li><a href="global.html#fetchCities">fetchCities</a></li><li><a href="global.html#fetchSeats">fetchSeats</a></li><li><a href="global.html#genreAPI">genreAPI</a></li><li><a href="global.html#getAllMovies">getAllMovies</a></li><li><a href="global.html#getMovieById">getMovieById</a></li><li><a href="global.html#getProfile">getProfile</a></li><li><a href="global.html#getRecommendedMovies">getRecommendedMovies</a></li><li><a href="global.html#getShowtimes">getShowtimes</a></li><li><a href="global.html#loadContent">loadContent</a></li><li><a href="global.html#loginUser">loginUser</a></li><li><a href="global.html#minutesToHMM">minutesToHMM</a></li><li><a href="global.html#movieAPI">movieAPI</a></li><li><a href="global.html#register">register</a></li><li><a href="global.html#showtimeAPI">showtimeAPI</a></li><li><a href="global.html#theaterAPI">theaterAPI</a></li><li><a href="global.html#updateProfile">updateProfile</a></li><li><a href="global.html#useAuth">useAuth</a></li><li><a href="global.html#validateEmail">validateEmail</a></li><li><a href="global.html#validatePassword">validatePassword</a></li><li><a href="global.html#validateRating">validateRating</a></li><li><a href="global.html#validateUsername">validateUsername</a></li><li><a href="global.html#watchlistAPI">watchlistAPI</a></li></ul>
+    
+</nav>
+
+<div id="main">
+    
+    <h1 class="page-title">frontend/src/components/movies/grid/MovieCard.jsx</h1>
+    
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import React from "react";
+import { Star, Film, Clock, Heart, MapPin } from "lucide-react"; // Додали MapPin
+import { minutesToHMM } from "../../../utils";
+import { cardStyles as s } from "./GridStyles";
+import { Card, Badge } from "../../ui/Atoms";
+
+/**
+ * Компонент картки фільму для відображення в каталозі.
+ * @component
+ * @param {Object} props - Властивості компонента.
+ * @param {Object} props.movie - Об'єкт із даними про фільм (назва, постер, рейтинг тощо).
+ * @param {boolean} props.isFavorite - Статус перебування фільму у списку бажаного.
+ * @param {Function} props.onOpen - Функція для відкриття детальної інформації.
+ * @param {Function} props.onToggleWatchlist - Функція для зміни статусу "обране".
+ * @param {Function} props.t - Функція i18next для локалізації текстів.
+ * @returns {JSX.Element} Картка фільму з підтримкою взаємодії.
+ */
+export const MovieCard = ({ movie, isFavorite, onOpen, onToggleWatchlist, t }) => {
+    return (
+        &lt;Card onClick={() => onOpen(movie)} className={`${s.container} flex flex-col h-full`}>
+            {/* Постер */}
+            &lt;div className={s.posterContainer}>
+                {movie.posterUrl || movie.poster ? (
+                    &lt;img src={movie.posterUrl || movie.poster} alt={movie.title} className={s.image} />
+                ) : (
+                    &lt;div className="h-full w-full flex flex-col items-center justify-center text-slate-300">
+                        &lt;Film size={48} strokeWidth={1} className="mb-3 opacity-20" />
+                        &lt;span className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-40">
+                            {t('movie.no_poster')}
+                        &lt;/span>
+                    &lt;/div>
+                )}
+
+                &lt;button
+                    onClick={(e) => { e.stopPropagation(); onToggleWatchlist(movie.id); }}
+                    className={`${s.watchlistBtn} ${isFavorite ? "bg-red-500 border-red-400 text-white shadow-red-200" : "bg-white border-slate-200 text-slate-600 hover:text-red-500"}`}
+                >
+                    &lt;Heart size={18} fill={isFavorite ? "currentColor" : "none"} strokeWidth={2.5} />
+                &lt;/button>
+            &lt;/div>
+
+            {/* Інфо */}
+            &lt;div className="pt-5 px-1 flex flex-col flex-1">
+                &lt;div className="flex-1 space-y-3">
+                    &lt;h3 className="text-lg font-extrabold text-slate-900 leading-tight truncate tracking-tight group-hover:text-blue-600 transition-colors">
+                        {movie.title}
+                    &lt;/h3>
+
+                    &lt;div className="flex items-center justify-between">
+                        &lt;div className="flex items-center gap-2 text-[13px] font-medium text-slate-400">
+                            &lt;span>{movie.year}&lt;/span>
+                            &lt;span className="w-1 h-1 rounded-full bg-slate-200" />
+                            &lt;span className="flex items-center gap-1">
+                                &lt;Clock size={14} className="opacity-70" />
+                                {minutesToHMM(movie.durationMin)}
+                            &lt;/span>
+                        &lt;/div>
+
+                        &lt;Badge variant="warning" className="gap-1.5 px-2.5">
+                            &lt;Star size={12} fill="currentColor" />
+                            &lt;span className="text-[12px] font-bold">{movie.rating || '0.0'}&lt;/span>
+                        &lt;/Badge>
+                    &lt;/div>
+
+                    &lt;div className="flex flex-wrap gap-2 pt-1">
+                        {movie.genres?.slice(0, 2).map(g => (
+                            &lt;Badge key={g.genre?.id || g} variant="primary">
+                                {t(`filters.genres.${g.genre?.name || g}`)}
+                            &lt;/Badge>
+                        ))}
+                    &lt;/div>
+                &lt;/div>
+
+            &lt;/div>
+        &lt;/Card>
+    );
+};</code></pre>
+        </article>
+    </section>
+
+
+
+
+    
+    
+</div>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Sat Feb 21 2026 19:54:18 GMT+0000 (Coordinated Universal Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+</footer>
+
+<script>prettyPrint();</script>
+<script src="scripts/polyfill.js"></script>
+<script src="scripts/linenumber.js"></script>
+
+
+
+</body>
+</html>

@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    
+    <meta charset="utf-8">
+    <title>backend/controllers/userController.js - Documentation</title>
+    
+    
+    <script src="scripts/prettify/prettify.js"></script>
+    <script src="scripts/prettify/lang-css.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc.css">
+    <script src="scripts/nav.js" defer></script>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+
+<input type="checkbox" id="nav-trigger" class="nav-trigger" />
+<label for="nav-trigger" class="navicon-button x">
+  <div class="navicon"></div>
+</label>
+
+<label for="nav-trigger" class="overlay"></label>
+
+<nav >
+    
+    
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-bookingController.html">bookingController</a></li><li><a href="module-hooks_useFilters.html">hooks/useFilters</a></li></ul><h3>Global</h3><ul><li><a href="global.html#BookingPage">BookingPage</a></li><li><a href="global.html#HomePage">HomePage</a></li><li><a href="global.html#LoginModal">LoginModal</a></li><li><a href="global.html#MovieCard">MovieCard</a></li><li><a href="global.html#SeatPicker">SeatPicker</a></li><li><a href="global.html#TheatersPage">TheatersPage</a></li><li><a href="global.html#auth">auth</a></li><li><a href="global.html#authAPI">authAPI</a></li><li><a href="global.html#authenticateToken">authenticateToken</a></li><li><a href="global.html#checkAvailability">checkAvailability</a></li><li><a href="global.html#checkDatabaseConnection">checkDatabaseConnection</a></li><li><a href="global.html#classNames">classNames</a></li><li><a href="global.html#fetchCities">fetchCities</a></li><li><a href="global.html#fetchSeats">fetchSeats</a></li><li><a href="global.html#genreAPI">genreAPI</a></li><li><a href="global.html#getAllMovies">getAllMovies</a></li><li><a href="global.html#getMovieById">getMovieById</a></li><li><a href="global.html#getProfile">getProfile</a></li><li><a href="global.html#getRecommendedMovies">getRecommendedMovies</a></li><li><a href="global.html#getShowtimes">getShowtimes</a></li><li><a href="global.html#loadContent">loadContent</a></li><li><a href="global.html#loginUser">loginUser</a></li><li><a href="global.html#minutesToHMM">minutesToHMM</a></li><li><a href="global.html#movieAPI">movieAPI</a></li><li><a href="global.html#register">register</a></li><li><a href="global.html#showtimeAPI">showtimeAPI</a></li><li><a href="global.html#theaterAPI">theaterAPI</a></li><li><a href="global.html#updateProfile">updateProfile</a></li><li><a href="global.html#useAuth">useAuth</a></li><li><a href="global.html#validateEmail">validateEmail</a></li><li><a href="global.html#validatePassword">validatePassword</a></li><li><a href="global.html#validateRating">validateRating</a></li><li><a href="global.html#validateUsername">validateUsername</a></li><li><a href="global.html#watchlistAPI">watchlistAPI</a></li></ul>
+    
+</nav>
+
+<div id="main">
+    
+    <h1 class="page-title">backend/controllers/userController.js</h1>
+    
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const { PrismaClient } = require('@prisma/client');
+const { validateUsername, validatePassword, validateEmail } = require('../utils/validation');
+
+const prisma = new PrismaClient();
+
+/**
+ * Виконує реєстрацію нового користувача з валідацією даних та хешуванням пароля.
+ * @async
+ * @param {Object} req - Запит, що містить login, email, name, password.
+ * @param {Object} res - Відповідь із даними створеного користувача.
+ * @returns {Promise&lt;void>}
+ */
+const register = async (req, res) => {
+    try {
+        const { login, email, name, password } = req.body;
+
+        if (!login || !email || !name || !password) {
+            return res.status(400).json({
+                success: false,
+                error: 'Всі поля є обов\'язковими'
+            });
+        }
+
+        const usernameCheck = validateUsername(login);
+        if (!usernameCheck.isValid) {
+            return res.status(400).json({ success: false, error: `Логін: ${usernameCheck.error}` });
+        }
+
+        const emailCheck = validateEmail(email);
+        if (!emailCheck.isValid) {
+            return res.status(400).json({ success: false, error: `Email: ${emailCheck.error}` });
+        }
+
+        const passwordCheck = validatePassword(password);
+        if (!passwordCheck.isValid) {
+            return res.status(400).json({ success: false, error: `Пароль: ${passwordCheck.error}` });
+        }
+
+        const existingUser = await prisma.user.findFirst({
+            where: { OR: [{ email }, { login }] }
+        });
+
+        if (existingUser) {
+            return res.status(409).json({ success: false, error: 'Користувач вже існує' });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
+        const newUser = await prisma.user.create({
+            data: { login, email, name, password: hashedPassword, isAdmin: false }
+        });
+
+        const { ...userWithoutPassword } = newUser;
+        res.status(201).json({ success: true, user: userWithoutPassword });
+
+    } catch (error) {
+        console.error('Register Error:', error);
+        res.status(500).json({ success: false, error: 'Помилка сервера при реєстрації' });
+    }
+};
+
+/**
+ * Виконує авторизацію користувача та повертає JWT токен.
+ * @async
+ * @param {Object} req - Запит із логіном та паролем.
+ * @param {Object} res - Відповідь із JWT токеном та даними користувача.
+ * @returns {Promise&lt;void>}
+ */
+const loginUser = async (req, res) => {
+    try {
+        const { login, password } = req.body;
+
+        if (!login || !password) {
+            return res.status(400).json({ success: false, error: 'Логін та пароль обовʼязкові' });
+        }
+
+        const user = await prisma.user.findFirst({
+            where: { OR: [{ login: login }, { email: login }] }
+        });
+
+        if (!user) {
+            return res.status(401).json({ success: false, error: 'Неправильний логін або пароль' });
+        }
+
+        const isPasswordValid = await bcrypt.compare(password, user.password);
+        if (!isPasswordValid) {
+            return res.status(401).json({ success: false, error: 'Неправильний логін або пароль' });
+        }
+
+        const token = jwt.sign(
+            { userId: user.id, login: user.login, isAdmin: user.isAdmin },
+            process.env.JWT_SECRET || 'fallback-secret-key-for-development',
+            { expiresIn: '24h' }
+        );
+
+        const userWithoutPassword = {
+            id: user.id,
+            login: user.login,
+            name: user.name,
+            email: user.email,
+            avatar: user.avatar,
+            favoriteGenres: user.favoriteGenres,
+            language: user.language,
+            theme: user.theme,
+            isAdmin: user.isAdmin,
+            createdAt: user.createdAt
+        };
+
+        res.json({ success: true, user: userWithoutPassword, token });
+
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(500).json({ success: false, error: 'Помилка сервера при авторизації' });
+    }
+};
+
+/**
+ * Отримує дані профілю поточного авторизованого користувача.
+ * @async
+ * @param {Object} req - Об'єкт запиту з даними з JWT токена.
+ * @param {Object} res - Відповідь з публічними даними профілю.
+ * @returns {Promise&lt;void>}
+ */
+const getProfile = async (req, res) => {
+    try {
+        const userId = req.user ? req.user.userId : null;
+
+        if (!userId) {
+            return res.status(401).json({ error: 'Неавторизований запит' });
+        }
+
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: {
+                id: true,
+                login: true,
+                name: true,
+                email: true,
+                avatar: true,
+                favoriteGenres: true,
+                language: true,
+                theme: true,
+                isAdmin: true,
+                createdAt: true
+            }
+        });
+
+        if (!user) {
+            return res.status(404).json({ error: 'Користувача не знайдено' });
+        }
+
+        res.json(user);
+    } catch (error) {
+        console.error('Get profile error:', error);
+        res.status(500).json({ error: 'Помилка сервера' });
+    }
+};
+
+/**
+ * Оновлює параметри профілю поточного користувача.
+ * @async
+ * @param {Object} req - Запит з новими даними профілю.
+ * @param {Object} res - Результат оновлення.
+ * @returns {Promise&lt;void>}
+ */
+const updateProfile = async (req, res) => {
+    try {
+        const userId = req.user ? req.user.userId : null;
+
+        if (!userId) {
+            return res.status(401).json({ success: false, error: 'Неавторизований запит' });
+        }
+
+        const { name, avatar, favoriteGenres, language, theme } = req.body;
+
+        const updatedUser = await prisma.user.update({
+            where: { id: userId },
+            data: {
+                name: name,
+                avatar: avatar,
+                favoriteGenres: favoriteGenres,
+                language: language,
+                theme: theme
+            },
+            select: {
+                id: true,
+                login: true,
+                name: true,
+                email: true,
+                avatar: true,
+                favoriteGenres: true,
+                language: true,
+                theme: true,
+                isAdmin: true,
+                createdAt: true
+            }
+        });
+
+        res.json({
+            success: true,
+            message: 'Профіль успішно оновлено',
+            user: updatedUser
+        });
+
+    } catch (error) {
+        console.error('Update profile error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Помилка сервера при оновленні профілю'
+        });
+    }
+};
+
+/**
+ * Перевіряє доступність логіна або email у системі.
+ * @async
+ * @param {Object} req - Запит з параметром login або email.
+ * @param {Object} res - Об'єкт з прапорцем available.
+ * @returns {Promise&lt;void>}
+ */
+const checkAvailability = async (req, res) => {
+    try {
+        const { login, email } = req.query;
+        let existing = null;
+
+        if (login) {
+            existing = await prisma.user.findUnique({ where: { login } });
+        } else if (email) {
+            existing = await prisma.user.findUnique({ where: { email } });
+        }
+
+        res.json({ available: !existing });
+    } catch {
+        res.status(500).json({ error: 'Помилка перевірки' });
+    }
+};
+
+module.exports = {
+    register,
+    loginUser,
+    getProfile,
+    updateProfile,
+    checkAvailability
+};</code></pre>
+        </article>
+    </section>
+
+
+
+
+    
+    
+</div>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Sat Feb 21 2026 19:54:18 GMT+0000 (Coordinated Universal Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+</footer>
+
+<script>prettyPrint();</script>
+<script src="scripts/polyfill.js"></script>
+<script src="scripts/linenumber.js"></script>
+
+
+
+</body>
+</html>
