@@ -1,13 +1,6 @@
 /**
  * @file app.js
  * Головний вхідний файл API-сервера.
- * * ### АРХІТЕКТУРНІ РІШЕННЯ:
- * - **Pattern**: Використано Middleware-орієнтовану архітектуру Express.js.
- * - **Layering**: Чіткий поділ на шари: Middleware (безпека/логування) -> Routes -> Controllers (бізнес-логіка) -> Prisma (Data Access).
- * - **Statelessness**: Сервер не зберігає стан сесій, використовуючи JWT для ідентифікації кожного запиту.
- * * ### ВЗАЄМОДІЯ:
- * - Виступає центральним вузлом, що об'єднує React-фронтенд та PostgreSQL.
- * - Реалізує CORS для безпечної транскордонної взаємодії компонентів.
  */
 
 const express = require('express');
@@ -15,28 +8,36 @@ const cors = require('cors');
 const { PrismaClient } = require('@prisma/client');
 const jwt = require('jsonwebtoken');
 const bookingController = require('./controllers/bookingController');
-
-// Підключаємо Swagger
-const swaggerUi = require('swagger-ui-express');
-const swaggerDocument = require('./swagger.json');
 require('dotenv').config();
 
-// 1. СТВОРЕННЯ СЕРВЕРА ТА БД
 const app = express();
 const prisma = new PrismaClient();
 
-// 2. НАЛАШТУВАННЯ SWAGGER (Тільки після const app = express())
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+// --- 1. НАЛАШТУВАННЯ SWAGGER (БАГАТОМОВНІСТЬ) ---
+const swaggerUi = require('swagger-ui-express');
+const swaggerDocumentUk = require('./swagger-uk.json');
+const swaggerDocumentEn = require('./swagger-en.json');
 
-// 3. НАЛАШТУВАННЯ MIDDLEWARE
+app.get('/swagger-uk.json', (req, res) => res.json(swaggerDocumentUk));
+app.get('/swagger-en.json', (req, res) => res.json(swaggerDocumentEn));
+
+const swaggerOptions = {
+    explorer: true,
+    swaggerOptions: {
+        urls: [
+            { url: '/swagger-uk.json', name: 'Українська (UK)' },
+            { url: '/swagger-en.json', name: 'English (EN)' }
+        ]
+    }
+};
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(null, swaggerOptions));
+
+// --- 2. НАЛАШТУВАННЯ MIDDLEWARE ---
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
-/**
- * ВЗАЄМОДІЯ: Система логування.
- * Забезпечує миттєву діагностику взаємодії між фронтендом та API.
- */
 app.use((req, res, next) => {
     console.log(`📡 [${new Date().toLocaleTimeString()}] ${req.method} ${req.url}`);
     next();
