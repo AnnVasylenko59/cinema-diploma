@@ -62,12 +62,20 @@ const cors = require('cors');
 const { PrismaClient } = require('@prisma/client');
 const jwt = require('jsonwebtoken');
 const bookingController = require('./controllers/bookingController');
+
+// Підключаємо Swagger
+const swaggerUi = require('swagger-ui-express');
+const swaggerDocument = require('./swagger.json');
 require('dotenv').config();
 
+// 1. СТВОРЕННЯ СЕРВЕРА ТА БД
 const app = express();
 const prisma = new PrismaClient();
 
-// --- 1. НАЛАШТУВАННЯ MIDDLEWARE ---
+// 2. НАЛАШТУВАННЯ SWAGGER (Тільки після const app = express())
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+
+// 3. НАЛАШТУВАННЯ MIDDLEWARE
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
@@ -81,14 +89,11 @@ app.use((req, res, next) => {
     next();
 });
 
-// --- 2. СЛУЖБОВІ ФУНКЦІЇ ТА АУТЕНТИФІКАЦІЯ ---
+// --- 4. СЛУЖБОВІ ФУНКЦІЇ ТА АУТЕНТИФІКАЦІЯ ---
 
 /**
  * БІЗНЕС-ЛОГІКА: Перевірка цілісності інфраструктури (Health Check).
  * Гарантує, що API не почне обробку запитів, якщо зв'язок із PostgreSQL через Prisma не встановлено.
- * @async
- * @function checkDatabaseConnection
- * @returns {Promise&lt;boolean>}
  */
 async function checkDatabaseConnection() {
     try {
@@ -104,14 +109,6 @@ async function checkDatabaseConnection() {
 /**
  * МЕХАНІЗМ БЕЗПЕКИ: Валідація доступу (Guard Middleware).
  * Реалізує Stateless-аутентифікацію.
- * 1. Витягує Bearer-токен.
- * 2. Перевіряє підпис через `JWT_SECRET`.
- * 3. Ініціалізує `req.user` для наступних контролерів.
- * @function authenticateToken
- * @param {Object} req - Запит.
- * @param {Object} res - Відповідь.
- * @param {Function} next - Наступний мідлвар.
- * @returns {void} &lt;--- ДОДАЙ ЦЕЙ РЯДОК
  */
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
@@ -121,7 +118,6 @@ const authenticateToken = (req, res, next) => {
 
     jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret-key-for-development', (err, user) => {
         if (err) {
-            // Виводимо причину 403 помилки в консоль сервера
             console.error('❌ JWT Verification Error:', err.message);
             return res.status(403).json({ error: 'Недійсний або прострочений токен' });
         }
@@ -130,7 +126,7 @@ const authenticateToken = (req, res, next) => {
     });
 };
 
-// --- 3. РОУТИ КОРИСТУВАЧІВ (AUTH &amp; PROFILE) ---
+// --- 5. РОУТИ КОРИСТУВАЧІВ (AUTH &amp; PROFILE) ---
 
 app.get('/api/users/check', async (req, res) => {
     try {
@@ -143,7 +139,6 @@ app.get('/api/users/check', async (req, res) => {
             existingUser = await prisma.user.findFirst({ where: { email: email } });
         }
 
-        // Якщо користувача не знайдено, значить логін/email вільні (available: true)
         res.json({ available: !existingUser });
     } catch (error) {
         console.error('❌ Check error:', error);
@@ -151,11 +146,6 @@ app.get('/api/users/check', async (req, res) => {
     }
 });
 
-/**
- * БІЗНЕС-ЛОГІКА: Аутентифікація та видача доступу.
- * Використовує складний запит OR-пошуку (Login або Email) для зручності користувача.
- * Генерує токен з терміном дії 24h.
- */
 app.post('/api/users/login', async (req, res) => {
     try {
         const { login, password } = req.body;
@@ -245,8 +235,7 @@ app.put('/api/users/profile', authenticateToken, async (req, res) => {
     }
 });
 
-
-// --- 4. СПИСОК БАЖАНОГО (WATCHLIST) ---
+// --- 6. СПИСОК БАЖАНОГО (WATCHLIST) ---
 
 app.get('/api/watchlist', authenticateToken, async (req, res) => {
     try {
@@ -289,7 +278,7 @@ app.post('/api/watchlist/toggle', authenticateToken, async (req, res) => {
     }
 });
 
-// --- 5. РОБОТА З ФІЛЬМАМИ ТА ЖАНРАМИ ---
+// --- 7. РОБОТА З ФІЛЬМАМИ ТА ЖАНРАМИ ---
 
 app.get('/api/movies', async (req, res) => {
     try {
@@ -334,7 +323,7 @@ app.get('/api/movies/:id/recommended', async (req, res) => {
     } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
-// --- 6. МІСТА ТА КІНОТЕАТРИ (Роути для TheatersPage) ---
+// --- 8. МІСТА ТА КІНОТЕАТРИ ---
 
 app.get('/api/theaters/cities', async (req, res) => {
     try {
@@ -355,20 +344,8 @@ app.get('/api/theaters', async (req, res) => {
     } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
-// --- 7. СЕАНСИ ТА БРОНЮВАННЯ ---
+// --- 9. СЕАНСИ ТА БРОНЮВАННЯ ---
 
-/**
- * ### ВАЖКИЙ АЛГОРИТМ: Динамічна фільтрація за часовим діапазоном.
- * Обробляє пошук сеансів за датою, конвертуючи вхідний рядок YYYY-MM-DD у математичний діапазон:
- * 1. `startOfDay`: Встановлює час на 00:00:00.000.
- * 2. `endOfDay`: Встановлює час на 23:59:59.999.
- * 3. Виконує запит Prisma з операторами `gte` (>=) та `lte` (&lt;=), що забезпечує
- * коректне вилучення сеансів незалежно від часового поясу сервера.
- * * @async
- * @param {Object} req - Об'єкт запиту Express.
- * @param {Object} res - Об'єкт відповіді Express.
- * @returns {Promise&lt;void>}
- */
 app.get('/api/showtimes', async (req, res) => {
     try {
         const { movieId, date, cityId } = req.query;
@@ -391,19 +368,17 @@ app.get('/api/showtimes', async (req, res) => {
     } catch (error) { res.status(500).json({ error: error.message }); }
 });
 
-// Роути бронювання мають бути перед 404 handler
 app.get('/api/bookings/showtime/:showtimeId', bookingController.getBookingData);
 app.post('/api/bookings', authenticateToken, bookingController.createBooking);
 app.get('/api/users/my-bookings', authenticateToken, bookingController.getUserBookings);
 
-// --- 8. СЛУЖБОВІ РОУТИ ТА ОБРОБКА ПОМИЛОК ---
+// --- 10. СЛУЖБОВІ РОУТИ ТА ОБРОБКА ПОМИЛОК ---
 
 app.get('/api/health', async (req, res) => {
     const dbStatus = await checkDatabaseConnection();
     res.json({ status: 'OK', database: dbStatus ? 'connected' : 'disconnected' });
 });
 
-// Фінальний обробник 404
 app.use((req, res) => {
     console.log(`⚠️ 404 - Not Found: ${req.method} ${req.url}`);
     res.status(404).json({ error: 'Маршрут не знайдено на сервері' });
@@ -429,7 +404,7 @@ module.exports = { app, prisma };</code></pre>
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Sat Feb 21 2026 19:54:18 GMT+0000 (Coordinated Universal Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Sun Feb 22 2026 13:58:40 GMT+0000 (Coordinated Universal Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
 </footer>
 
 <script>prettyPrint();</script>
