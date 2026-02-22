@@ -1,0 +1,229 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Cinema Diploma API",
+    "version": "1.0.0",
+    "description": "Інтерактивна документація API для дипломного проєкту. Включає складні алгоритми бронювання та фільтрації."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000",
+      "description": "Локальний сервер"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 1 },
+          "login": { "type": "string", "example": "ivan_cinema" },
+          "email": { "type": "string", "example": "user@example.com" },
+          "name": { "type": "string", "example": "Іван" },
+          "isAdmin": { "type": "boolean", "example": false }
+        }
+      },
+      "Movie": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "example": 10 },
+          "title": { "type": "string", "example": "Дюна: Частина друга" },
+          "rating": { "type": "number", "format": "float", "example": 8.9 },
+          "poster": { "type": "string", "example": "/images/posters/dune2.jpg" }
+        }
+      },
+      "Booking": {
+        "type": "object",
+        "required": ["showtimeId", "selectedSeats"],
+        "properties": {
+          "showtimeId": { "type": "integer", "example": 105 },
+          "selectedSeats": {
+            "type": "array",
+            "items": { "type": "string" },
+            "example": ["1-5", "1-6"]
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string", "example": "Повідомлення про помилку" },
+          "success": { "type": "boolean", "example": false }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/users/check": {
+      "get": {
+        "summary": "Перевірка доступності логіну або email",
+        "tags": ["Auth"],
+        "parameters": [
+          { "in": "query", "name": "login", "schema": { "type": "string" } },
+          { "in": "query", "name": "email", "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "Результат перевірки" } }
+      }
+    },
+    "/api/users/login": {
+      "post": {
+        "summary": "Аутентифікація",
+        "tags": ["Auth"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "login": { "type": "string", "example": "admin" },
+                  "password": { "type": "string", "example": "12345" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Успішна авторизація з JWT" } }
+      }
+    },
+    "/api/users/register": {
+      "post": {
+        "summary": "Реєстрація",
+        "tags": ["Auth"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["login", "name", "email", "password"],
+                "properties": {
+                  "login": { "type": "string" },
+                  "name": { "type": "string" },
+                  "email": { "type": "string" },
+                  "password": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Створено" }, "409": { "description": "Вже існує" } }
+      }
+    },
+    "/api/users/profile": {
+      "get": {
+        "summary": "Отримання профілю",
+        "tags": ["Profile"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": { "200": { "description": "Дані користувача" } }
+      },
+      "put": {
+        "summary": "Оновлення профілю",
+        "tags": ["Profile"],
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "language": { "type": "string", "example": "uk" },
+                  "theme": { "type": "string", "example": "dark" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Оновлено" } }
+      }
+    },
+    "/api/movies": {
+      "get": {
+        "summary": "Список фільмів",
+        "tags": ["Movies"],
+        "responses": { "200": { "description": "Масив фільмів" } }
+      }
+    },
+    "/api/genres": {
+      "get": {
+        "summary": "Список жанрів",
+        "tags": ["Movies"],
+        "responses": { "200": { "description": "Масив жанрів" } }
+      }
+    },
+    "/api/movies/{id}/recommended": {
+      "get": {
+        "summary": "Рекомендовані фільми",
+        "tags": ["Movies"],
+        "parameters": [
+          { "in": "path", "name": "id", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": { "200": { "description": "Схожі фільми" } }
+      }
+    },
+    "/api/showtimes": {
+      "get": {
+        "summary": "Складна фільтрація сеансів",
+        "description": "Алгоритм фільтрації: конвертує дату в діапазон від 00:00 до 23:59. Шукає зв'язки міста через зали.",
+        "tags": ["Showtimes"],
+        "parameters": [
+          { "in": "query", "name": "movieId", "schema": { "type": "integer" } },
+          { "in": "query", "name": "date", "schema": { "type": "string", "format": "date" }, "description": "Формат YYYY-MM-DD" },
+          { "in": "query", "name": "cityId", "schema": { "type": "integer" } }
+        ],
+        "responses": { "200": { "description": "Відфільтровані сеанси" } }
+      }
+    },
+    "/api/bookings/showtime/{showtimeId}": {
+      "get": {
+        "summary": "Генерація схеми зали",
+        "description": "Складний алгоритм: витягує всі квитки сеансу та мапить поле isOccupied для кожного місця.",
+        "tags": ["Bookings"],
+        "parameters": [
+          { "in": "path", "name": "showtimeId", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": { "200": { "description": "Дані зали зі статусом місць" } }
+      }
+    },
+    "/api/bookings": {
+      "post": {
+        "summary": "Атомарне створення бронювання",
+        "description": "Алгоритм запобігання подвійного бронювання через транзакцію Prisma.",
+        "tags": ["Bookings"],
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/Booking" }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Заброньовано" }, "400": { "description": "Місця зайняті" } }
+      }
+    },
+    "/api/users/my-bookings": {
+      "get": {
+        "summary": "Історія бронювань",
+        "tags": ["Bookings"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": { "200": { "description": "Масив транзакцій" } }
+      }
+    },
+    "/api/health": {
+      "get": {
+        "summary": "Статус сервера",
+        "tags": ["System"],
+        "responses": { "200": { "description": "Система працює" } }
+      }
+    }
+  }
+}
