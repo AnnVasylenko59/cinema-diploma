@@ -2,7 +2,7 @@
  * @file app.js
  * Головний вхідний файл API-сервера.
  */
-
+const { v4: uuidv4 } = require('uuid');
 const express = require('express');
 const cors = require('cors');
 const { PrismaClient } = require('@prisma/client');
@@ -379,6 +379,40 @@ app.get('/api/health', async (req, res) => {
 app.use((req, res) => {
     logger. warning(`404 - Route Not Found: ${req.method} ${req.url}`);
     res.status(404).json({ error: 'Маршрут не знайдено на сервері' });
+});
+
+app.use((err, req, res, next) => {
+    const errorId = uuidv4();
+
+    const errorContext = {
+        moduleName: 'GlobalErrorHandler',
+        errorId: errorId,
+        user: req.user ? req.user.login : 'Guest',
+        method: req.method,
+        url: req.originalUrl,
+        body: req.body,
+        stack: err.stack
+    };
+
+    logger.error(`Unhandled Server Error: ${err.message}`, errorContext);
+
+    const statusCode = err.status || 500;
+    res.status(statusCode).json({
+        success: false,
+        error: 'Виникла непередбачувана помилка на сервері.',
+        message: 'Ми вже зафіксували проблему і працюємо над її вирішенням.',
+        errorId: errorId,
+        timestamp: new Date().toISOString()
+    });
+});
+
+process.on('uncaughtException', (error) => {
+    logger.critical(`Uncaught Exception: ${error.message}`, { moduleName: 'Process', stack: error.stack });
+    process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    logger.critical(`Unhandled Promise Rejection: ${reason}`, { moduleName: 'Process' });
 });
 
 const PORT = process.env.PORT || 5000;
