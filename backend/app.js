@@ -8,6 +8,7 @@ const cors = require('cors');
 const { PrismaClient } = require('@prisma/client');
 const jwt = require('jsonwebtoken');
 const bookingController = require('./controllers/bookingController');
+const logger = require('./utils/logger');
 require('dotenv').config();
 
 const app = express();
@@ -38,8 +39,9 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
+// Логування всіх вхідних запитів (INFO)
 app.use((req, res, next) => {
-    console.log(`📡 [${new Date().toLocaleTimeString()}] ${req.method} ${req.url}`);
+    logger.info(`Incoming request: ${req.method} ${req.url}`);
     next();
 });
 
@@ -47,32 +49,33 @@ app.use((req, res, next) => {
 
 /**
  * БІЗНЕС-ЛОГІКА: Перевірка цілісності інфраструктури (Health Check).
- * Гарантує, що API не почне обробку запитів, якщо зв'язок із PostgreSQL через Prisma не встановлено.
  */
 async function checkDatabaseConnection() {
     try {
         await prisma.$connect();
-        console.log('✅ Database connection established');
+        logger.info('Database connection established successfully');
         return true;
     } catch (error) {
-        console.error('❌ Database connection failed:', error.message);
+        logger.error(`Database connection failed: ${error.message}`);
         return false;
     }
 }
 
 /**
  * МЕХАНІЗМ БЕЗПЕКИ: Валідація доступу (Guard Middleware).
- * Реалізує Stateless-аутентифікацію.
  */
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
-    if (!token) return res.status(401).json({ error: 'Токен відсутній' });
+    if (!token) {
+        logger. warning(`Unauthorized access attempt to ${req.url} (No token)`); 
+        return res.status(401).json({ error: 'Токен відсутній' });
+    }
 
     jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret-key-for-development', (err, user) => {
         if (err) {
-            console.error('❌ JWT Verification Error:', err.message);
+            logger. warning(`JWT Verification Error on ${req.url}: ${err.message}`); 
             return res.status(403).json({ error: 'Недійсний або прострочений токен' });
         }
         req.user = user;
@@ -95,7 +98,7 @@ app.get('/api/users/check', async (req, res) => {
 
         res.json({ available: !existingUser });
     } catch (error) {
-        console.error('❌ Check error:', error);
+        logger.error(`Error in /users/check: ${error.message}`); 
         res.status(500).json({ error: 'Помилка при перевірці доступності' });
     }
 });
@@ -110,8 +113,11 @@ app.post('/api/users/login', async (req, res) => {
         });
 
         if (!user || password !== user.password) {
+            logger. warning(`Failed login attempt for login/email: ${login}`); 
             return res.status(401).json({ success: false, error: 'Неправильний логін або пароль' });
         }
+
+        logger.info(`User logged in successfully: ${user.login}`); 
 
         const token = jwt.sign(
             { userId: user.id, login: user.login, isAdmin: user.isAdmin },
@@ -128,7 +134,8 @@ app.post('/api/users/login', async (req, res) => {
             },
             token
         });
-    } catch {
+    } catch (error) {
+        logger.error(`Login server error: ${error.message}`); 
         res.status(500).json({ success: false, error: 'Помилка сервера' });
     }
 });
@@ -137,11 +144,16 @@ app.post('/api/users/register', async (req, res) => {
     try {
         const { login, name, email, password } = req.body;
         const existingUser = await prisma.user.findFirst({ where: { OR: [{ login }, { email }] } });
-        if (existingUser) return res.status(409).json({ success: false, error: 'Користувач вже існує' });
+        if (existingUser) {
+            logger. warning(`Registration failed: User ${login} or ${email} already exists`); 
+            return res.status(409).json({ success: false, error: 'Користувач вже існує' });
+        }
 
         const newUser = await prisma.user.create({
             data: { login, name, email, password, isAdmin: false }
         });
+
+        logger.info(`New user registered: ${newUser.login}`); 
 
         const token = jwt.sign(
             { userId: newUser.id, login: newUser.login },
@@ -150,6 +162,7 @@ app.post('/api/users/register', async (req, res) => {
         );
         res.status(201).json({ success: true, user: newUser, token });
     } catch (error) {
+        logger.error(`Registration error: ${error.message}`); 
         res.status(500).json({ success: false, error: error.message });
     }
 });
@@ -164,9 +177,13 @@ app.get('/api/users/profile', authenticateToken, async (req, res) => {
                 isAdmin: true, createdAt: true
             }
         });
-        if (!user) return res.status(404).json({ error: 'Користувача не знайдено' });
+        if (!user) {
+            logger. warning(`Profile not found for userId: ${req.user.userId}`); 
+            return res.status(404).json({ error: 'Користувача не знайдено' });
+        }
         res.json(user);
     } catch (error) {
+        logger.error(`Error fetching profile for userId ${req.user.userId}: ${error.message}`); 
         res.status(500).json({ error: error.message });
     }
 });
@@ -183,8 +200,10 @@ app.put('/api/users/profile', authenticateToken, async (req, res) => {
                 isAdmin: true, createdAt: true
             }
         });
+        logger.info(`User profile updated: ${updatedUser.login}`); 
         res.json({ success: true, user: updatedUser });
-    } catch {
+    } catch (error) {
+        logger.error(`Error updating profile for userId ${req.user.userId}: ${error.message}`); 
         res.status(500).json({ error: 'Помилка при оновленні профілю' });
     }
 });
@@ -203,6 +222,7 @@ app.get('/api/watchlist', authenticateToken, async (req, res) => {
         });
         res.json(items.map(item => item.movie));
     } catch (error) {
+        logger.error(`Error fetching watchlist for userId ${req.user.userId}: ${error.message}`); 
         res.status(500).json({ error: error.message });
     }
 });
@@ -220,14 +240,17 @@ app.post('/api/watchlist/toggle', authenticateToken, async (req, res) => {
 
         if (existing) {
             await prisma.watchlistItem.delete({ where: { id: existing.id } });
+            logger.info(`Movie ${movieId} removed from watchlist by user ${userId}`); 
             return res.json({ success: true, added: false });
         } else {
             await prisma.watchlistItem.create({
                 data: { userId: userId, movieId: parseInt(movieId) }
             });
+            logger.info(`Movie ${movieId} added to watchlist by user ${userId}`); 
             return res.json({ success: true, added: true });
         }
     } catch (error) {
+        logger.error(`Error toggling watchlist for userId ${req.user.userId}: ${error.message}`); 
         res.status(500).json({ error: error.message });
     }
 });
@@ -240,7 +263,10 @@ app.get('/api/movies', async (req, res) => {
             include: { genres: { include: { genre: true } } }
         });
         res.json({ movies });
-    } catch (error) { res.status(500).json({ error: error.message }); }
+    } catch (error) {
+        logger.error(`Error fetching movies: ${error.message}`); 
+        res.status(500).json({ error: error.message });
+    }
 });
 
 app.get('/api/genres', async (req, res) => {
@@ -250,6 +276,7 @@ app.get('/api/genres', async (req, res) => {
         });
         res.json(genres);
     } catch (error) {
+        logger.error(`Error fetching genres: ${error.message}`); 
         res.status(500).json({ error: error.message });
     }
 });
@@ -262,7 +289,11 @@ app.get('/api/movies/:id/recommended', async (req, res) => {
             include: { genres: true }
         });
 
-        if (!currentMovie) return res.status(404).json({ error: 'Movie not found' });
+        if (!currentMovie) {
+            logger. warning(`Recommended movies requested for unknown movie ID: ${id}`); 
+            return res.status(404).json({ error: 'Movie not found' });
+        }
+
         const genreIds = currentMovie.genres.map(g => g.genreId);
 
         const recommended = await prisma.movie.findMany({
@@ -274,7 +305,10 @@ app.get('/api/movies/:id/recommended', async (req, res) => {
             include: { genres: { include: { genre: true } } }
         });
         res.json(recommended);
-    } catch (error) { res.status(500).json({ error: error.message }); }
+    } catch (error) {
+        logger.error(`Error fetching recommended movies for ID ${req.params.id}: ${error.message}`); 
+        res.status(500).json({ error: error.message });
+    }
 });
 
 // --- 8. МІСТА ТА КІНОТЕАТРИ ---
@@ -283,7 +317,10 @@ app.get('/api/theaters/cities', async (req, res) => {
     try {
         const cities = await prisma.city.findMany({ orderBy: { name: 'asc' } });
         res.json(cities);
-    } catch (error) { res.status(500).json({ error: error.message }); }
+    } catch (error) {
+        logger.error(`Error fetching cities: ${error.message}`);
+        res.status(500).json({ error: error.message });
+    }
 });
 
 app.get('/api/theaters', async (req, res) => {
@@ -295,7 +332,10 @@ app.get('/api/theaters', async (req, res) => {
             include: { halls: true }
         });
         res.json({ theaters });
-    } catch (error) { res.status(500).json({ error: error.message }); }
+    } catch (error) {
+        logger.error(`Error fetching theaters: ${error.message}`);
+        res.status(500).json({ error: error.message });
+    }
 });
 
 // --- 9. СЕАНСИ ТА БРОНЮВАННЯ ---
@@ -319,7 +359,10 @@ app.get('/api/showtimes', async (req, res) => {
             orderBy: { startTime: 'asc' }
         });
         res.json(showtimes);
-    } catch (error) { res.status(500).json({ error: error.message }); }
+    } catch (error) {
+        logger.error(`Error fetching showtimes: ${error.message}`);
+        res.status(500).json({ error: error.message });
+    }
 });
 
 app.get('/api/bookings/showtime/:showtimeId', bookingController.getBookingData);
@@ -334,13 +377,13 @@ app.get('/api/health', async (req, res) => {
 });
 
 app.use((req, res) => {
-    console.log(`⚠️ 404 - Not Found: ${req.method} ${req.url}`);
+    logger. warning(`404 - Route Not Found: ${req.method} ${req.url}`);
     res.status(404).json({ error: 'Маршрут не знайдено на сервері' });
 });
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-    console.log(`🚀 Server running on http://localhost:${PORT}`);
+    logger.info(`Server is running and listening on port ${PORT}`);
     checkDatabaseConnection();
 });
 
