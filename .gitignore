@@ -56,3 +56,4 @@ junit.xml
 .temp/
 .tmp/
 docs/gen/
+logs/

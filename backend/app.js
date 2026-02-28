@@ -41,7 +41,15 @@ app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // Логування всіх вхідних запитів (INFO)
 app.use((req, res, next) => {
-    logger.info(`Incoming request: ${req.method} ${req.url}`);
+    const requestContext = {
+        moduleName: 'Router',
+        method: req.method,
+        url: req.url,
+        ip: req.ip || req.connection.remoteAddress,
+        userAgent: req.get('User-Agent')
+    };
+
+    logger.info(`Incoming request: ${req.method} ${req.url}`, requestContext);
     next();
 });
 
