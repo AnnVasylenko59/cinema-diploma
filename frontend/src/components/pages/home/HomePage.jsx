@@ -52,7 +52,16 @@ export const HomePage = ({
         setTime("any");
     };
 
-    if (error) return <ErrorState onRetry={onRetry} />;
+    if (error) {
+        const errorType = !navigator.onLine || error?.message?.includes('Network') ? 'network' : '500';
+        return (
+            <ErrorState
+                type={errorType}
+                onRetry={onRetry}
+                onReport={() => alert(t('errors.report') + " - Функція в розробці")}
+            />
+        );
+    }
 
     return (
         <div className="space-y-10 pb-20">

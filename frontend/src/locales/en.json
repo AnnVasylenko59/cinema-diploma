@@ -205,9 +205,16 @@
     "no_showtimes": "No showtimes"
   },
   "errors": {
-    "default_title": "Connection lost",
-    "default_message": "Failed to fetch data from the server. Please check your connection or try again.",
-    "retry": "Retry",
-    "back": "Back to home"
+    "default_title": "Oops! Something went wrong",
+    "default_message": "We couldn't process your request. Please check your connection or try again later.",
+    "retry": "Try again",
+    "back": "Back to home",
+    "report": "Report problem",
+    "404_title": "Page not found",
+    "404_message": "The page you are looking for doesn't exist or has been moved. Let's get you back to the catalog.",
+    "500_title": "Temporary difficulties",
+    "500_message": "Our service is currently experiencing technical issues. Our team has been notified. Please try refreshing the page in a few minutes.",
+    "network_title": "Connection lost",
+    "network_message": "It seems you are offline. Please check your internet connection and Wi-Fi settings, then try again."
   }
 }

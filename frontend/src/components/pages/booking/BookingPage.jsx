@@ -64,7 +64,16 @@ export const BookingPage = ({ chosenShowtime, setStep, onConfirmSeats }) => {
         />;
     }
 
-    if (error) return <ErrorState onRetry={fetchSeats} onBack={() => setStep("theaters")} />;
+    if (error) {
+        return (
+            <ErrorState
+                type="500"
+                onRetry={fetchSeats}
+                onBack={() => setStep("theaters")}
+                onReport={() => alert(t('errors.report') + " - Функція в розробці")}
+            />
+        );
+    }
 
     if (isLoading) return <LoadingState label={t('theaters.sync')} />;
 

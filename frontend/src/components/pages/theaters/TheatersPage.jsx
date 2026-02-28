@@ -175,7 +175,16 @@ export const TheatersPage = ({
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    if (error) return <ErrorState onRetry={() => window.location.reload()} onBack={() => setStep("home")} />;
+    if (error) {
+        return (
+            <ErrorState
+                type="500"
+                onRetry={() => window.location.reload()}
+                onBack={() => setStep("home")}
+                onReport={() => alert(t('errors.report') + " - Функція в розробці")}
+            />
+        );
+    }
 
     if (!propMovie && !isLoading) {
         return (
