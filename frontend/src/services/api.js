@@ -153,4 +153,28 @@ export const watchlistAPI = {
     toggle: (movieId) => api.post('/watchlist/toggle', { movieId }),
 };
 
+/**
+ * Об'єкт API для централізованого логування помилок (Better Stack / ELK).
+ */
+export const logAPI = {
+    /**
+     * Відправляє лог на бекенд для подальшого запису в хмару/файл.
+     * @async
+     * @param {string} message - Опис проблеми.
+     * @param {Object} [context={}] - Додаткові дані (на якій сторінці це сталося тощо).
+     * @returns {Promise<Object>}
+     */
+    sendError: async (message, context = {}) => {
+        try {
+            await api.post('/logs', {
+                level: 'error',
+                message: message,
+                context: context
+            });
+        } catch (error) {
+            console.warn("⚠️ Не вдалося відправити лог: бекенд недоступний.", error.message);
+        }
+    },
+};
+
 export default api;

@@ -14,7 +14,8 @@ import { MovieCard } from "../../movies/grid/MovieCard";
 
 import { CalendarPicker } from "./CalendarPicker";
 import { TheatersMap } from "./TheatersMap";
-import { showtimeAPI, theaterAPI, movieAPI } from "../../../services/api";
+
+import { showtimeAPI, theaterAPI, movieAPI, logAPI } from "../../../services/api";
 
 /**
  * Сторінка вибору кінотеатру та часу сеансу для конкретного фільму.
@@ -131,7 +132,7 @@ export const TheatersPage = ({
             }
 
             setError(false);
-        } catch (e) { // ВИПРАВЛЕНО: додано (e), бо змінна використовується нижче
+        } catch (e) {
             console.error("Content load error:", e);
             setError(true);
         } finally {
@@ -151,7 +152,7 @@ export const TheatersPage = ({
             try {
                 const city = await fetchCities();
                 await loadContent(city);
-            } catch { // ВИПРАВЛЕНО: видалено (e), бо вона тут не використовується
+            } catch {
                 setError(true);
                 setIsLoading(false);
             }
@@ -181,7 +182,17 @@ export const TheatersPage = ({
                 type="500"
                 onRetry={() => window.location.reload()}
                 onBack={() => setStep("home")}
-                onReport={() => alert(t('errors.report') + " - Функція в розробці")}
+                onReport={() => {
+                    logAPI.sendError("Користувач повідомив про проблему на сторінці Кінотеатрів", {
+                        page: "TheatersPage",
+                        movieId: propMovie?.id,
+                        cityId: selectedCity?.id,
+                        selectedDate: selectedDate,
+                        action: "User clicked report button"
+                    });
+
+                    alert("Дякуємо! Звіт про помилку успішно відправлено розробникам.");
+                }}
             />
         );
     }

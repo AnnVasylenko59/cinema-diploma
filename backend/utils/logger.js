@@ -1,6 +1,11 @@
 const winston = require('winston');
 const DailyRotateFile = require('winston-daily-rotate-file');
 
+const { Logtail } = require('@logtail/node');
+const { LogtailTransport } = require('@logtail/winston');
+
+const logtail = new Logtail('rYQ4ngswKfHhu1bFpssiXB8n');
+
 const customLevels = {
     levels: { critical: 0, error: 1, warning: 2, info: 3, debug: 4 },
     colors: { critical: 'red', error: 'magenta', warning: 'yellow', info: 'green', debug: 'blue' }
@@ -17,8 +22,6 @@ const fileFormat = winston.format.combine(
     winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
     winston.format.json()
 );
-
-// --- РОТАЦІЯ ЛОГІВ ---
 
 const errorRotateTransport = new DailyRotateFile({
     filename: 'logs/error-%DATE%.log',
@@ -49,7 +52,9 @@ const logger = winston.createLogger({
             )
         }),
         errorRotateTransport,
-        combinedRotateTransport
+        combinedRotateTransport,
+
+        new LogtailTransport(logtail)
     ],
 });
 

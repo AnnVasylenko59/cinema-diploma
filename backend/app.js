@@ -53,6 +53,30 @@ app.use((req, res, next) => {
     next();
 });
 
+// --- 3. ПРИЙОМ ЛОГІВ З ФРОНТЕНДУ ---
+app.post('/api/logs', (req, res) => {
+    try {
+        const { level = 'error', message, context = {} } = req.body;
+
+        const userContext = req.user ? { userLogin: req.user.login, userId: req.user.userId } : { user: 'Guest' };
+
+        logger.log({
+            level: level,
+            message: `[FRONTEND] ${message}`,
+            moduleName: 'FrontendClient',
+            ...context,
+            ...userContext,
+            ip: req.ip || req.connection.remoteAddress,
+            userAgent: req.get('User-Agent')
+        });
+
+        res.status(200).json({ success: true, message: 'Лог успішно збережено' });
+    } catch (error) {
+        logger.error(`Error saving frontend log: ${error.message}`);
+        res.status(500).json({ error: 'Не вдалося зберегти лог' });
+    }
+});
+
 // --- 4. СЛУЖБОВІ ФУНКЦІЇ ТА АУТЕНТИФІКАЦІЯ ---
 
 /**

@@ -9,6 +9,8 @@ import { LoadingState } from "../LoadingState.jsx";
 import { BookingSummary } from "./BookingSummary.jsx";
 import { ErrorState } from "../../ui/ErrorState.jsx";
 
+import { logAPI } from "../../../services/api.js";
+
 /**
  * Сторінка вибору місць у залі для обраного сеансу.
  * @component
@@ -70,7 +72,15 @@ export const BookingPage = ({ chosenShowtime, setStep, onConfirmSeats }) => {
                 type="500"
                 onRetry={fetchSeats}
                 onBack={() => setStep("theaters")}
-                onReport={() => alert(t('errors.report') + " - Функція в розробці")}
+                onReport={() => {
+                    logAPI.sendError("Користувач повідомив про проблему на сторінці Бронювання", {
+                        page: "BookingPage",
+                        showtimeId: chosenShowtime?.id,
+                        action: "User clicked report button"
+                    });
+
+                    alert("Дякуємо! Звіт про помилку успішно відправлено розробникам.");
+                }}
             />
         );
     }
@@ -99,7 +109,7 @@ export const BookingPage = ({ chosenShowtime, setStep, onConfirmSeats }) => {
                     />
                 </div>
 
-                {/* Винесена бокова панель */}
+                {/* Бокова панель */}
                 <BookingSummary
                     fullShowtime={fullShowtime}
                     selectedSeats={selectedSeats}

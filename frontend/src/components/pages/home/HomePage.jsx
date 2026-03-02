@@ -11,6 +11,8 @@ import { ErrorState } from "../../ui/ErrorState";
 import { LoadingState } from "../LoadingState.jsx";
 import { EmptyState } from "../../ui/EmptyState";
 
+import { logAPI } from "../../../services/api.js";
+
 /**
  * Головна сторінка каталогу фільмів із слайдером та фільтрами.
  * @component
@@ -58,7 +60,15 @@ export const HomePage = ({
             <ErrorState
                 type={errorType}
                 onRetry={onRetry}
-                onReport={() => alert(t('errors.report') + " - Функція в розробці")}
+                onReport={() => {
+                    logAPI.sendError("Користувач повідомив про проблему на сторінці Каталогу", {
+                        page: "HomePage",
+                        errorType: errorType,
+                        action: "User clicked report button"
+                    });
+
+                    alert("Дякуємо! Звіт про помилку успішно відправлено розробникам.");
+                }}
             />
         );
     }
