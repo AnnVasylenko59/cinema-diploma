@@ -13,6 +13,7 @@
   "dependencies": {
     "@mui/icons-material": "^7.3.2",
     "@mui/material": "^7.3.2",
+    "@sentry/react": "^10.41.0",
     "axios": "^1.12.2",
     "framer-motion": "^12.23.12",
     "i18next": "^25.7.4",

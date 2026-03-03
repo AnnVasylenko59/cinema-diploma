@@ -6,6 +6,8 @@ import {
 import { AnimatePresence, motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 
+import * as Sentry from "@sentry/react";
+
 import { PageHeader } from "../PageHeader";
 import { LoadingState } from "../LoadingState.jsx";
 import { EmptyState } from "../../ui/EmptyState.jsx";
@@ -183,6 +185,7 @@ export const TheatersPage = ({
                 onRetry={() => window.location.reload()}
                 onBack={() => setStep("home")}
                 onReport={() => {
+                    // 1. Лог у Better Stack
                     logAPI.sendError("Користувач повідомив про проблему на сторінці Кінотеатрів", {
                         page: "TheatersPage",
                         movieId: propMovie?.id,
@@ -191,7 +194,21 @@ export const TheatersPage = ({
                         action: "User clicked report button"
                     });
 
-                    alert("Дякуємо! Звіт про помилку успішно відправлено розробникам.");
+                    // 2. Форма Sentry
+                    const eventId = Sentry.captureMessage("User Feedback: Issue on TheatersPage");
+
+                    Sentry.showReportDialog({
+                        eventId,
+                        title: "Повідомити про проблему",
+                        subtitle: "Будь ласка, опишіть кроки, які призвели до цієї помилки.",
+                        subtitle2: "Це допоможе нам швидко все полагодити.",
+                        labelName: "Ваше ім'я",
+                        labelEmail: "Ваш Email",
+                        labelComments: "Що пішло не так? (Кроки відтворення)",
+                        labelSubmit: "Відправити звіт",
+                        labelClose: "Закрити",
+                        successMessage: "Дякуємо! Ваш звіт та технічні дані успішно відправлено."
+                    });
                 }}
             />
         );

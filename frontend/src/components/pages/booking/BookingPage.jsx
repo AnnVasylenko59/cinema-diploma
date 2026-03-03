@@ -3,6 +3,8 @@ import axios from "axios";
 import { Ticket, AlertTriangle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import * as Sentry from "@sentry/react";
+
 import { SeatPicker } from "./SeatPicker.jsx";
 import { PageHeader } from "../PageHeader.jsx";
 import { LoadingState } from "../LoadingState.jsx";
@@ -73,13 +75,28 @@ export const BookingPage = ({ chosenShowtime, setStep, onConfirmSeats }) => {
                 onRetry={fetchSeats}
                 onBack={() => setStep("theaters")}
                 onReport={() => {
+                    // 1. Лог у Better Stack
                     logAPI.sendError("Користувач повідомив про проблему на сторінці Бронювання", {
                         page: "BookingPage",
                         showtimeId: chosenShowtime?.id,
                         action: "User clicked report button"
                     });
 
-                    alert("Дякуємо! Звіт про помилку успішно відправлено розробникам.");
+                    // 2. Форма Sentry
+                    const eventId = Sentry.captureMessage("User Feedback: Issue on BookingPage");
+
+                    Sentry.showReportDialog({
+                        eventId,
+                        title: "Повідомити про проблему",
+                        subtitle: "Будь ласка, опишіть кроки, які призвели до цієї помилки.",
+                        subtitle2: "Це допоможе нам швидко все полагодити.",
+                        labelName: "Ваше ім'я",
+                        labelEmail: "Ваш Email",
+                        labelComments: "Що пішло не так? (Кроки відтворення)",
+                        labelSubmit: "Відправити звіт",
+                        labelClose: "Закрити",
+                        successMessage: "Дякуємо! Ваш звіт та технічні дані успішно відправлено."
+                    });
                 }}
             />
         );

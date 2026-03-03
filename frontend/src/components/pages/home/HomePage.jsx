@@ -2,6 +2,8 @@ import React from "react";
 import { SearchX } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import * as Sentry from "@sentry/react";
+
 import { Slider } from "../../movies/slider/Slider.jsx";
 import { FiltersBar } from "../../movies/filters/FiltersBar.jsx";
 import { MoviesGrid } from "../../movies/grid/MoviesGrid.jsx";
@@ -61,13 +63,28 @@ export const HomePage = ({
                 type={errorType}
                 onRetry={onRetry}
                 onReport={() => {
+                    // 1. Лог у Better Stack
                     logAPI.sendError("Користувач повідомив про проблему на сторінці Каталогу", {
                         page: "HomePage",
                         errorType: errorType,
                         action: "User clicked report button"
                     });
 
-                    alert("Дякуємо! Звіт про помилку успішно відправлено розробникам.");
+                    // 2. Форма Sentry
+                    const eventId = Sentry.captureMessage("User Feedback: Issue on HomePage");
+
+                    Sentry.showReportDialog({
+                        eventId,
+                        title: "Повідомити про проблему",
+                        subtitle: "Будь ласка, опишіть кроки, які призвели до цієї помилки.",
+                        subtitle2: "Це допоможе нам швидко все полагодити.",
+                        labelName: "Ваше ім'я",
+                        labelEmail: "Ваш Email",
+                        labelComments: "Що пішло не так? (Кроки відтворення)",
+                        labelSubmit: "Відправити звіт",
+                        labelClose: "Закрити",
+                        successMessage: "Дякуємо! Ваш звіт та технічні дані успішно відправлено."
+                    });
                 }}
             />
         );
