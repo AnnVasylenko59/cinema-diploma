@@ -39,17 +39,24 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
-// Логування всіх вхідних запитів (INFO)
 app.use((req, res, next) => {
+
+    const correlationId = req.headers['x-correlation-id'] || uuidv4();
+
+    req.correlationId = correlationId;
+
+    res.setHeader('X-Correlation-ID', correlationId);
+
     const requestContext = {
         moduleName: 'Router',
+        correlationId: correlationId,
         method: req.method,
         url: req.url,
         ip: req.ip || req.connection.remoteAddress,
         userAgent: req.get('User-Agent')
     };
 
-    logger.info(`Incoming request: ${req.method} ${req.url}`, requestContext);
+    logger.info(`[TRACE] Incoming request: ${req.method} ${req.url}`, requestContext);
     next();
 });
 
@@ -414,11 +421,12 @@ app.use((req, res) => {
 });
 
 app.use((err, req, res, next) => {
-    const errorId = uuidv4();
+    const traceId = req.correlationId || uuidv4();
 
     const errorContext = {
         moduleName: 'GlobalErrorHandler',
-        errorId: errorId,
+        correlationId: traceId,
+        errorId: traceId,
         user: req.user ? req.user.login : 'Guest',
         method: req.method,
         url: req.originalUrl,
@@ -426,14 +434,14 @@ app.use((err, req, res, next) => {
         stack: err.stack
     };
 
-    logger.error(`Unhandled Server Error: ${err.message}`, errorContext);
+    logger.error(`[TRACE] Unhandled Server Error: ${err.message}`, errorContext);
 
     const statusCode = err.status || 500;
     res.status(statusCode).json({
         success: false,
         error: 'Виникла непередбачувана помилка на сервері.',
         message: 'Ми вже зафіксували проблему і працюємо над її вирішенням.',
-        errorId: errorId,
+        traceId: traceId,
         timestamp: new Date().toISOString()
     });
 });

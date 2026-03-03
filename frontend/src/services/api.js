@@ -7,6 +7,16 @@ const api = axios.create({
     timeout: 5000,
 });
 
+// Трасування запитів
+api.interceptors.request.use(config => {
+    const correlationId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 15);
+
+    config.headers['X-Correlation-ID'] = correlationId;
+    return config;
+}, error => {
+    return Promise.reject(error);
+});
+
 api.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('authToken');
