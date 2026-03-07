@@ -40,23 +40,32 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 app.use((req, res, next) => {
-
     const correlationId = req.headers['x-correlation-id'] || uuidv4();
-
     req.correlationId = correlationId;
-
     res.setHeader('X-Correlation-ID', correlationId);
 
-    const requestContext = {
-        moduleName: 'Router',
-        correlationId: correlationId,
-        method: req.method,
-        url: req.url,
-        ip: req.ip || req.connection.remoteAddress,
-        userAgent: req.get('User-Agent')
-    };
+    // Засікаємо старт запиту (Інструмент CPU-профілювання)
+    const start = performance.now();
 
-    logger.info(`[TRACE] Incoming request: ${req.method} ${req.url}`, requestContext);
+    res.on('finish', () => {
+        const duration = performance.now() - start;
+
+        const requestContext = {
+            moduleName: 'Router_Profiler',
+            correlationId: correlationId,
+            method: req.method,
+            url: req.url,
+            statusCode: res.statusCode,
+            durationMs: parseFloat(duration.toFixed(2))
+        };
+
+        if (duration > 200) {
+            logger.warn(`[PROFILER] Slow Request: ${req.method} ${req.url} took ${duration.toFixed(2)}ms`, requestContext);
+        } else {
+            logger.info(`[PROFILER] Request OK: ${req.method} ${req.url} took ${duration.toFixed(2)}ms`, requestContext);
+        }
+    });
+
     next();
 });
 
