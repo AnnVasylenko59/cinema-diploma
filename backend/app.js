@@ -303,9 +303,34 @@ app.post('/api/watchlist/toggle', authenticateToken, async (req, res) => {
     }
 });
 
+// --- ОПТИМІЗАЦІЯ ПРОДУКТИВНОСТІ: In-Memory Cache ---
+const apiCache = new Map();
+
+const cacheMiddleware = (durationSec) => (req, res, next) => {
+    if (req.method !== 'GET') return next();
+
+    const key = req.originalUrl;
+    const cachedResponse = apiCache.get(key);
+
+    if (cachedResponse && cachedResponse.expiry > Date.now()) {
+        logger.info(`[CACHE HIT] Optimized Request: ${key} served from memory in O(1)`);
+        return res.json(cachedResponse.data);
+    }
+
+    const originalJson = res.json;
+    res.json = function (body) {
+        apiCache.set(key, {
+            data: body,
+            expiry: Date.now() + durationSec * 1000
+        });
+        originalJson.call(this, body);
+    };
+    next();
+};
+
 // --- 7. РОБОТА З ФІЛЬМАМИ ТА ЖАНРАМИ ---
 
-app.get('/api/movies', async (req, res) => {
+app.get('/api/movies', cacheMiddleware(300), async (req, res) => {
     try {
         const movies = await prisma.movie.findMany({
             include: { genres: { include: { genre: true } } }
@@ -317,7 +342,7 @@ app.get('/api/movies', async (req, res) => {
     }
 });
 
-app.get('/api/genres', async (req, res) => {
+app.get('/api/genres', cacheMiddleware(300), async (req, res) => {
     try {
         const genres = await prisma.genre.findMany({
             orderBy: { name: 'asc' }
@@ -329,7 +354,7 @@ app.get('/api/genres', async (req, res) => {
     }
 });
 
-app.get('/api/movies/:id/recommended', async (req, res) => {
+app.get('/api/movies/:id/recommended', cacheMiddleware(300), async (req, res) => {
     try {
         const { id } = req.params;
         const currentMovie = await prisma.movie.findUnique({
@@ -361,7 +386,7 @@ app.get('/api/movies/:id/recommended', async (req, res) => {
 
 // --- 8. МІСТА ТА КІНОТЕАТРИ ---
 
-app.get('/api/theaters/cities', async (req, res) => {
+app.get('/api/theaters/cities', cacheMiddleware(300), async (req, res) => {
     try {
         const cities = await prisma.city.findMany({ orderBy: { name: 'asc' } });
         res.json(cities);
@@ -371,7 +396,7 @@ app.get('/api/theaters/cities', async (req, res) => {
     }
 });
 
-app.get('/api/theaters', async (req, res) => {
+app.get('/api/theaters', cacheMiddleware(300), async (req, res) => {
     try {
         const { cityId } = req.query;
         const where = cityId ? { cityId: parseInt(cityId) } : {};
