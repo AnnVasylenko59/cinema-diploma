@@ -20,9 +20,10 @@ import { logAPI } from "../../../services/api.js";
  * @param {Object} props.chosenShowtime - Дані обраного сеансу.
  * @param {Function} props.setStep - Функція перемикання кроків бронювання.
  * @param {Function} props.onConfirmSeats - Коллбек для підтвердження вибору місць.
+ * @param {Function} props.onBookingCreated - Коллбек для передачі bookingId в батьківський компонент.
  * @returns {JSX.Element|null} Інтерфейс вибору місць або стан помилки/завантаження.
  */
-export const BookingPage = ({ chosenShowtime, setStep, onConfirmSeats }) => {
+export const BookingPage = ({ chosenShowtime, setStep, onConfirmSeats, onBookingCreated }) => {
     const { t, i18n } = useTranslation();
     const [fullShowtime, setFullShowtime] = useState(null);
     const [selectedSeats, setSelectedSeats] = useState([]);
@@ -30,16 +31,21 @@ export const BookingPage = ({ chosenShowtime, setStep, onConfirmSeats }) => {
     const [error, setError] = useState(false);
 
     const currentLocale = i18n.language === 'en' ? 'en-US' : 'uk-UA';
-    const isPastSession = new Date(chosenShowtime.startTime) < new Date();
+
+    // Безпечна перевірка дати
+    const isPastSession = chosenShowtime?.startTime
+        ? new Date(chosenShowtime.startTime) < new Date()
+        : false;
 
     /**
+     * ### СКЛАДНИЙ АЛГОРИТМ: Синхронізація схеми зали.
      * Завантажує актуальні дані про зайняті місця з сервера.
      * @async
      * @function fetchSeats
      * @returns {Promise<void>} Оновлює локальний стан даними сеансу.
      */
     const fetchSeats = useCallback(async () => {
-        if (isPastSession) {
+        if (!chosenShowtime?.id || isPastSession) {
             setIsLoading(false);
             return;
         }
@@ -49,7 +55,8 @@ export const BookingPage = ({ chosenShowtime, setStep, onConfirmSeats }) => {
         try {
             const res = await axios.get(`http://localhost:5000/api/bookings/showtime/${chosenShowtime.id}`);
             setFullShowtime(res.data);
-        } catch {
+        } catch (err) {
+            console.error("Fetch seats error:", err);
             setError(true);
         } finally {
             setIsLoading(false);
@@ -59,6 +66,43 @@ export const BookingPage = ({ chosenShowtime, setStep, onConfirmSeats }) => {
     useEffect(() => {
         if (chosenShowtime?.id) fetchSeats();
     }, [chosenShowtime?.id, fetchSeats]);
+
+    /**
+     * Обробник підтвердження бронювання з отриманням bookingId.
+     * @async
+     * @function handleConfirm
+     * @param {Array} seats - Вибрані місця для бронювання.
+     * @returns {Promise<void>}
+     */
+    const handleConfirm = async (seats) => {
+        try {
+            const result = await onConfirmSeats(seats);
+
+            if (result?.bookingId) {
+                localStorage.setItem('lastBookingId', result.bookingId);
+
+                if (onBookingCreated) {
+                    onBookingCreated(result.bookingId);
+                }
+            } else {
+                console.warn('⚠️ bookingId не отримано від сервера');
+            }
+
+            return result;
+        } catch (error) {
+            console.error('❌ Помилка при створенні бронювання:', error);
+
+            // Логування помилки
+            logAPI.sendError("Помилка при створенні бронювання", {
+                page: "BookingPage",
+                showtimeId: chosenShowtime?.id,
+                seatsCount: seats?.length,
+                error: error.message
+            });
+
+            throw error;
+        }
+    };
 
     if (isPastSession) {
         return <ErrorState
@@ -130,7 +174,7 @@ export const BookingPage = ({ chosenShowtime, setStep, onConfirmSeats }) => {
                 <BookingSummary
                     fullShowtime={fullShowtime}
                     selectedSeats={selectedSeats}
-                    onConfirm={onConfirmSeats}
+                    onConfirm={handleConfirm}
                     locale={currentLocale}
                 />
             </div>

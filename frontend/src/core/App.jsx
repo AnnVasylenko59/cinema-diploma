@@ -56,6 +56,9 @@ export default function App() {
     const [registerOpen, setRegisterOpen] = useState(false);
     const [profileModal, setProfileModal] = useState(null);
 
+    // Стан для збереження bookingId
+    const [bookingId, setBookingId] = useState(null);
+
     const { user, login, register, logout, updateUser } = useAuth();
     const filters = useFilters();
 
@@ -113,11 +116,10 @@ export default function App() {
         });
     }, [movies, filters.query, filters.rating, filters.selectedGenres]);
 
-    // Обробка бронювання
     const handleConfirmSeats = useCallback(async (selectedSeats) => {
         if (!user) {
             setLoginOpen(true);
-            return;
+            return { success: false };
         }
         try {
             const token = localStorage.getItem('authToken');
@@ -126,9 +128,24 @@ export default function App() {
                 { showtimeId: chosenShowtime.id, selectedSeats },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
-            if (res.data.success) setStep("confirmation");
-        } catch {
+
+            if (res.data.success) {
+                // Зберігаємо bookingId в стані
+                const newBookingId = res.data.bookingId;
+                setBookingId(newBookingId);
+
+                // Переходимо на сторінку підтвердження
+                setStep("confirmation");
+
+                // Повертаємо bookingId для ланцюжка викликів
+                return { success: true, bookingId: newBookingId };
+            }
+
+            return { success: false };
+        } catch (error) {
+            console.error('Booking error:', error);
             alert(t('errors.default_message'));
+            return { success: false, error: error.message };
         }
     }, [user, chosenShowtime, t]);
 
@@ -202,10 +219,11 @@ export default function App() {
                         chosenShowtime={chosenShowtime}
                         setStep={setStep}
                         onConfirmSeats={handleConfirmSeats}
+                        onBookingCreated={(id) => setBookingId(id)}
                     />
                 );
             case "confirmation":
-                return <ConfirmationPage setStep={setStep} />;
+                return <ConfirmationPage setStep={setStep} bookingId={bookingId} />;
             default: return null;
         }
     };

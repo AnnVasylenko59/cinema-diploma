@@ -441,6 +441,7 @@ app.get('/api/showtimes', async (req, res) => {
 app.get('/api/bookings/showtime/:showtimeId', bookingController.getBookingData);
 app.post('/api/bookings', authenticateToken, bookingController.createBooking);
 app.get('/api/users/my-bookings', authenticateToken, bookingController.getUserBookings);
+app.get('/api/bookings/:bookingId/pdf', authenticateToken, bookingController.downloadTicketPdf);
 
 // --- 10. СЛУЖБОВІ РОУТИ ТА ОБРОБКА ПОМИЛОК ---
 

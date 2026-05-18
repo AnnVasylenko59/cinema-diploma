@@ -300,7 +300,7 @@ export const TheatersPage = ({
                 </h4>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                    {recommended.map((m) => (
+                    {Array.isArray(recommended) && recommended.map((m) => (
                         <MovieCard
                             key={m.id}
                             movie={m}

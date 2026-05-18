@@ -1,10 +1,31 @@
-import React from "react";
-import { MapPin, Clock, CheckCircle2 } from "lucide-react";
+import React, { useState } from "react";
+import { MapPin, Clock, CheckCircle2, Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 export const BookingSummary = ({ fullShowtime, selectedSeats, onConfirm, locale }) => {
     const { t } = useTranslation();
+    const [isProcessing, setIsProcessing] = useState(false);
     const totalPrice = selectedSeats.length * fullShowtime.price;
+
+    /**
+     * Асинхронний обробник підтвердження бронювання.
+     * Очікує Promise від onConfirm для отримання bookingId.
+     */
+    const handleConfirmClick = async () => {
+        if (selectedSeats.length === 0 || isProcessing) return;
+
+        try {
+            setIsProcessing(true);
+            // Чекаємо результат від onConfirm (тепер це асинхронна функція)
+            const result = await onConfirm(selectedSeats);
+            console.log('✅ Бронювання створено, результат:', result);
+        } catch (error) {
+            console.error('❌ Помилка бронювання:', error);
+            alert('Не вдалося створити бронювання. Спробуйте ще раз.');
+        } finally {
+            setIsProcessing(false);
+        }
+    };
 
     return (
         <div className="w-full lg:w-80 flex flex-col gap-4">
@@ -66,12 +87,16 @@ export const BookingSummary = ({ fullShowtime, selectedSeats, onConfirm, locale 
                 </div>
 
                 <button
-                    disabled={selectedSeats.length === 0}
-                    onClick={() => onConfirm(selectedSeats)}
+                    disabled={selectedSeats.length === 0 || isProcessing}
+                    onClick={handleConfirmClick}
                     className="w-full py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-50 disabled:text-slate-300 text-white rounded-2xl font-bold text-xs uppercase tracking-widest transition-all shadow-lg flex items-center justify-center gap-3 active:scale-95"
                 >
-                    <CheckCircle2 size={18} />
-                    {t('booking.confirm')}
+                    {isProcessing ? (
+                        <Loader2 size={18} className="animate-spin" />
+                    ) : (
+                        <CheckCircle2 size={18} />
+                    )}
+                    {isProcessing ? t('booking.processing') || 'Обробка...' : t('booking.confirm')}
                 </button>
             </div>
         </div>

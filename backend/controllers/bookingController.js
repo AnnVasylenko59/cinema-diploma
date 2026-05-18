@@ -1,24 +1,17 @@
 const { PrismaClient } = require('@prisma/client');
+const PDFDocument = require('pdfkit');
+const QRCode = require('qrcode');
+const path = require('path');
+const fs = require('fs'); // Додано модуль для перевірки файлів шрифтів
+
 const prisma = new PrismaClient();
 
 /**
  * Контролер реалізує критичний шар бізнес-логіки — керування життєвим циклом бронювань.
  * Взаємодіє з Prisma ORM для забезпечення цілісності даних між сутностями Booking, Ticket та Seat.
  * @module bookingController
- * @description ### БІЗНЕС-ЛОГІКА ТА АРХІТЕКТУРА:
  */
 const bookingController = {
-    /**
-     * ### СКЛАДНИЙ АЛГОРИТМ: Синхронізація схеми зали.
-     * Перетворює нормалізовані дані БД у високорівневу структуру для фронтенду:
-     * 1. **Data Aggregation**: Виконує глибоке вкладене завантаження (Include) через Prisma.
-     * 2. **State Flattening**: Використовує `flatMap` для вилучення зайнятих ID місць.
-     * 3. **Dynamic Mapping**: Створює віртуальне поле `isOccupied`, зіставляючи статичні місця зали з динамічними квитками сеансу.
-     * @async
-     * @param {Object} req - Об'єкт запиту Express.
-     * @param {Object} res - Об'єкт відповіді Express.
-     * @returns {Promise<void>}
-     */
     getBookingData: async (req, res) => {
         try {
             const { showtimeId } = req.params;
@@ -60,17 +53,6 @@ const bookingController = {
         }
     },
 
-    /**
-     * ### КРИТИЧНА БІЗНЕС-ЛОГІКА: Атомарне бронювання.
-     * Реалізує алгоритм запобігання подвійного бронювання (Double Booking Prevention):
-     * 1. **Transaction Isolation**: Весь процес обгорнуто в `$transaction`. Якщо будь-який крок не вдасться, БД повернеться до початкового стану (Rollback).
-     * 2. **Race Condition Protection**: Перед створенням записів виконується перевірка наявності квитків на ці ж координати (row/seat) у межах поточної транзакції.
-     * 3. **Data Consistency**: Гарантує, що сума створених Ticket відповідає кількості обраних місць.
-     * @async
-     * @param {Object} req - Запит із showtimeId та selectedSeats.
-     * @param {Object} res - Відповідь із результатом.
-     * @returns {Promise<void>} <--- ДОДАЙ ЦЕЙ РЯДОК
-     */
     createBooking: async (req, res) => {
         try {
             const { showtimeId, selectedSeats } = req.body;
@@ -142,14 +124,6 @@ const bookingController = {
         }
     },
 
-    /**
-     * ### ВЗАЄМОДІЯ КОМПОНЕНТІВ:
-     * Забезпечує зв'язок між профілем користувача та історією транзакцій.
-     * Використовує сортування `desc` для відображення останніх подій спочатку (UX патерн).
-     * @async
-     * @param {Object} req - Запит із `req.user.userId`, отриманим від `authenticateToken`.
-     * @param {Object} res - Відповідь із масивом замовлень.
-     */
     getUserBookings: async (req, res) => {
         try {
             const bookings = await prisma.booking.findMany({
@@ -171,6 +145,104 @@ const bookingController = {
         } catch (error) {
             console.error('History fetch error:', error);
             res.status(500).json({ error: 'Помилка завантаження історії бронювань' });
+        }
+    },
+
+    /**
+     * ### НАУКОВО-ПРИКЛАДНИЙ МОДУЛЬ: Динамічна генерація звітних документів.
+     * Формування електронних квитків PDF з виправленим відображенням валюти та покращеним дизайном.
+     */
+    downloadTicketPdf: async (req, res) => {
+        try {
+            const { bookingId } = req.params;
+            const bId = parseInt(bookingId);
+
+            const booking = await prisma.booking.findUnique({
+                where: { id: bId },
+                include: {
+                    user: true,
+                    showtime: {
+                        include: {
+                            movie: true,
+                            hall: { include: { theater: true } }
+                        }
+                    },
+                    tickets: { include: { seat: true } }
+                }
+            });
+
+            if (!booking) return res.status(404).json({ error: 'Бронювання не знайдено' });
+
+            if (booking.userId !== req.user.userId && !req.user.isAdmin) {
+                return res.status(403).json({ error: 'Доступ заборонено' });
+            }
+
+            const verificationUrl = `https://cinema-diploma.vercel.app/tickets/verify/${booking.id}`;
+            const qrCodeDataUrl = await QRCode.toDataURL(verificationUrl, { margin: 1, width: 150 });
+
+            const doc = new PDFDocument({ size: 'A6', margin: 15 });
+
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', `attachment; filename=ticket-${booking.id}.pdf`);
+            doc.pipe(res);
+
+            const fontPath = path.join(__dirname, '..', 'utils', 'fonts', 'Roboto-Regular.ttf');
+            const fontBoldPath = path.join(__dirname, '..', 'utils', 'fonts', 'Roboto-Bold.ttf');
+
+            const useBold = fs.existsSync(fontBoldPath) ? fontBoldPath : fontPath;
+
+            doc.font(useBold).fillColor('#1E293B').fontSize(16).text('КІНОАФІША ПЛЮС', { align: 'center' });
+            doc.moveDown(0.15);
+
+            doc.font(fontPath).fillColor('#64748B').fontSize(7.5).text('Електронний квиток на сеанс', { align: 'center', tracking: 0.5 });
+            doc.moveDown(0.4);
+
+            doc.strokeColor('#CBD5E1').lineWidth(0.75).moveTo(15, doc.y).lineTo(doc.page.width - 15, doc.y).stroke();
+            doc.moveDown(0.5);
+
+            doc.font(useBold).fillColor('#0F172A').fontSize(12.5).text(booking.showtime.movie.title, { align: 'center' });
+            doc.moveDown(0.5);
+
+            doc.font(fontPath).fillColor('#334155').fontSize(9);
+            doc.text(`Кінотеатр:  ${booking.showtime.hall.theater.name}`, { lineGap: 2 });
+            doc.text(`Зал:  ${booking.showtime.hall.name}`, { lineGap: 2 });
+
+            const sessionDate = new Date(booking.showtime.startTime).toLocaleDateString('uk-UA', {
+                day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'
+            });
+            doc.text(`Час:  ${sessionDate}`, { lineGap: 2 });
+
+            doc.moveDown(0.4);
+            doc.strokeColor('#E2E8F0').lineWidth(0.5).moveTo(15, doc.y).lineTo(doc.page.width - 15, doc.y).stroke();
+            doc.moveDown(0.5);
+
+            doc.font(fontPath).fillColor('#334155').fontSize(8.5);
+            booking.tickets.forEach((t, i) => {
+                doc.text(`Місце ${i + 1}: Ряд ${t.seat.rowNum}, Крісло ${t.seat.seatNum} (${t.price} грн)`, { lineGap: 2 });
+            });
+
+            doc.moveDown(0.6);
+
+            const total = booking.tickets.reduce((sum, t) => sum + t.price, 0);
+            doc.font(useBold).fillColor('#047857').fontSize(11).text(`Всього сплачено: ${total} грн`, { align: 'center' });
+            doc.moveDown(0.5);
+
+            const qrWidth = 90;
+            const qrX = (doc.page.width - qrWidth) / 2;
+            doc.image(qrCodeDataUrl, qrX, doc.y, { width: qrWidth });
+
+            doc.font(fontPath)
+                .fillColor('#94A3B8')
+                .fontSize(7)
+                .text(`ID: ${booking.id} • Контроль на вході за QR-кодом`, 15, doc.page.height - 25, {
+                    align: 'center',
+                    width: doc.page.width - 30
+                });
+
+            doc.end();
+        } catch (error) {
+            console.error('PDF generation crash:', error);
+            res.status(500).json({ error: 'Помилка при збиранні PDF-файлу' });
         }
     }
 };
