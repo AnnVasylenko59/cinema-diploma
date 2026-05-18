@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import axios from "axios";
 
 /**
- * КОМПОНЕНТ: Модальне вікно панелі адміністратора з функціями Undo Delete та повного редагування.
+ * КОМПОНЕНТ: Модальне вікно панелі адміністратора з функціями додавання, редагування та видалення.
  * @param {Object} props - Пропси компонента.
  * @param {boolean} props.isOpen - Статус видимості.
  * @param {Function} props.onClose - Закриття вікна.
@@ -19,8 +19,10 @@ export const AdminModal = ({ isOpen, onClose, movies = [], onRefresh }) => {
     const [isDeleting, setIsDeleting] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
 
-    // Стейти для режиму редагування
+    // Стейти для режимів форми (редагування або додавання)
     const [editingMovie, setEditingMovie] = useState(null);
+    const [isAdding, setIsAdding] = useState(false);
+
     const [formData, setFormData] = useState({
         title: "", year: "", durationMin: "", backdropUrl: "",
         posterUrl: "", trailerUrl: "", description: "", rating: "", director: "", genres: ""
@@ -33,7 +35,15 @@ export const AdminModal = ({ isOpen, onClose, movies = [], onRefresh }) => {
     const deleteTimerRef = useRef(null);
     const countdownIntervalRef = useRef(null);
 
-    // Функція фінального видалення на сервері
+    // Очищення полів форми
+    const resetForm = () => {
+        setFormData({
+            title: "", year: "", durationMin: "", backdropUrl: "",
+            posterUrl: "", trailerUrl: "", description: "", rating: "", director: "", genres: ""
+        });
+    };
+
+    // Остаточне видалення фільму на бекенді
     const executeRealDelete = async (movieId) => {
         setIsDeleting(true);
         try {
@@ -77,9 +87,17 @@ export const AdminModal = ({ isOpen, onClose, movies = [], onRefresh }) => {
         setPendingDelete(null);
     };
 
-    // Ініціалізація форми даними обраного фільму
+    // Увімкнення режиму додавання фільму
+    const handleStartAdd = () => {
+        setIsAdding(true);
+        setEditingMovie(null);
+        resetForm();
+    };
+
+    // Увімкнення режиму редагування фільму
     const handleStartEdit = (movie) => {
         setEditingMovie(movie);
+        setIsAdding(false);
         setFormData({
             title: movie.title || "",
             year: movie.year || "",
@@ -94,20 +112,18 @@ export const AdminModal = ({ isOpen, onClose, movies = [], onRefresh }) => {
         });
     };
 
-    // Обробник зміни полів форми
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    // Сабміт оновлених даних на сервер
-    const handleSaveEdit = async (e) => {
+    // Обробник збереження форми (працює і на POST, і на PUT)
+    const handleSaveForm = async (e) => {
         e.preventDefault();
         setIsSaving(true);
         try {
             const token = localStorage.getItem('authToken');
 
-            // Форматування даних (числа та масив жанрів) перед відправкою
             const formattedData = {
                 ...formData,
                 year: formData.year ? parseInt(formData.year, 10) : undefined,
@@ -116,19 +132,36 @@ export const AdminModal = ({ isOpen, onClose, movies = [], onRefresh }) => {
                 genres: formData.genres ? formData.genres.split(",").map(g => g.trim()).filter(Boolean) : []
             };
 
-            await axios.put(`http://localhost:5000/api/movies/${editingMovie.id}`, formattedData, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            if (editingMovie) {
+                // Якщо редагуємо — шлемо PUT
+                await axios.put(`http://localhost:5000/api/movies/${editingMovie.id}`, formattedData, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                alert(t("admin.movies.edit_success", "Дані фільму успішно оновлено!"));
+            } else if (isAdding) {
+                // Якщо додаємо новий — шлемо POST
+                await axios.post("http://localhost:5000/api/movies", formattedData, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                alert(t("admin.movies.add_success", "Новий фільм успішно створено!"));
+            }
 
-            alert(t("admin.movies.edit_success", "Дані фільму успішно оновлено!"));
             setEditingMovie(null);
+            setIsAdding(false);
+            resetForm();
             onRefresh?.();
         } catch (error) {
-            console.error("Update error:", error);
-            alert(error.response?.data?.error || "Помилка при збереженні змін фільму");
+            console.error("Save error:", error);
+            alert(error.response?.data?.error || "Помилка при збереженні даних фільму");
         } finally {
             setIsSaving(false);
         }
+    };
+
+    const handleCancelForm = () => {
+        setEditingMovie(null);
+        setIsAdding(false);
+        resetForm();
     };
 
     const handleSafeClose = () => {
@@ -150,6 +183,7 @@ export const AdminModal = ({ isOpen, onClose, movies = [], onRefresh }) => {
     if (!isOpen) return null;
 
     const displayedMovies = movies.filter(m => m.id !== pendingDelete?.id);
+    const showForm = isAdding || !!editingMovie;
 
     const mockStats = {
         totalRevenue: "45,200 ₴",
@@ -173,10 +207,10 @@ export const AdminModal = ({ isOpen, onClose, movies = [], onRefresh }) => {
                         </div>
                         <div>
                             <h2 className="text-xl font-black tracking-tight text-gray-900">
-                                {editingMovie ? t("admin.title.edit", "Редагування фільму") : t("admin.title", "Панель адміністратора")}
+                                {isAdding ? t("admin.title.add", "Додавання фільму") : editingMovie ? t("admin.title.edit", "Редагування фільму") : t("admin.title", "Панель адміністратора")}
                             </h2>
                             <p className="text-xs text-gray-400 font-medium">
-                                {editingMovie ? `${t("admin.subtitle.editing", "Зміна параметрів для:")} ${editingMovie.title}` : t("admin.subtitle", "Керування кінотеатром та аналітика")}
+                                {isAdding ? t("admin.subtitle.add", "Створення нової картки фільму в базі даних") : editingMovie ? `${t("admin.subtitle.editing", "Зміна параметрів для:")} ${editingMovie.title}` : t("admin.subtitle", "Керування кінотеатром та аналітика")}
                             </p>
                         </div>
                     </div>
@@ -188,8 +222,8 @@ export const AdminModal = ({ isOpen, onClose, movies = [], onRefresh }) => {
                     </button>
                 </div>
 
-                {/* Таби відображаються лише якщо ми не в режимі редагування */}
-                {!editingMovie && (
+                {/* Таби (приховуються у режимі форми) */}
+                {!showForm && (
                     <div className="px-8 bg-gray-50/50 border-b border-gray-100 flex gap-4">
                         <button
                             onClick={() => setActiveTab("movies")}
@@ -210,29 +244,27 @@ export const AdminModal = ({ isOpen, onClose, movies = [], onRefresh }) => {
                     </div>
                 )}
 
-                {/* Основний блок контенту */}
+                {/* Контент */}
                 <div className="flex-1 overflow-y-auto p-8 bg-gray-50/30">
-                    {editingMovie ? (
-                        /* ФОРМА РЕДАГУВАННЯ ФІЛЬМУ */
-                        <form onSubmit={handleSaveEdit} className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm space-y-6 max-w-4xl mx-auto">
+                    {showForm ? (
+                        /* УНІВЕРСАЛЬНА ФОРМА (ДОДАВАННЯ ТА РЕДАГУВАННЯ) */
+                        <form onSubmit={handleSaveForm} className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm space-y-6 max-w-4xl mx-auto">
                             <div className="flex items-center justify-between border-b border-gray-100 pb-4 mb-2">
                                 <button
                                     type="button"
-                                    onClick={() => setEditingMovie(null)}
+                                    onClick={handleCancelForm}
                                     className="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-gray-900 transition-colors"
                                 >
                                     <ArrowLeft size={16} /> {t("admin.form.back", "Назад до списку")}
                                 </button>
-                                <span className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-md uppercase tracking-wider">ID: {editingMovie.id}</span>
+                                {editingMovie && <span className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-md uppercase tracking-wider">ID: {editingMovie.id}</span>}
                             </div>
 
-                            {/* Рядок 1: Назва фільму */}
                             <div>
                                 <label className="block text-xs font-black uppercase text-gray-400 tracking-wider mb-2">{t("admin.form.title", "Назва фільму *")}</label>
                                 <input required type="text" name="title" value={formData.title} onChange={handleInputChange} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-blue-500 font-bold text-gray-900 text-sm bg-gray-50/30 transition-all" />
                             </div>
 
-                            {/* Рядок 2: Режисер, Рік, Тривалість, Рейтинг */}
                             <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                                 <div>
                                     <label className="block text-xs font-black uppercase text-gray-400 tracking-wider mb-2">{t("admin.form.director", "Режисер")}</label>
@@ -252,7 +284,6 @@ export const AdminModal = ({ isOpen, onClose, movies = [], onRefresh }) => {
                                 </div>
                             </div>
 
-                            {/* Рядок 3: Медіа URL посилання */}
                             <div className="space-y-4">
                                 <div>
                                     <label className="block text-xs font-black uppercase text-gray-400 tracking-wider mb-2">{t("admin.form.poster", "Посилання на постер (Poster URL)")}</label>
@@ -268,26 +299,23 @@ export const AdminModal = ({ isOpen, onClose, movies = [], onRefresh }) => {
                                 </div>
                             </div>
 
-                            {/* Рядок 4: Жанри */}
                             <div>
                                 <label className="block text-xs font-black uppercase text-gray-400 tracking-wider mb-2">{t("admin.form.genres", "Жанри (через кому)")}</label>
                                 <input type="text" name="genres" value={formData.genres} onChange={handleInputChange} placeholder="Екшн, Драма, Фантастика" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-blue-500 text-sm font-bold text-gray-700 bg-gray-50/30" />
                                 <p className="text-[10px] text-gray-400 mt-1 font-medium">{t("admin.form.genres_tip", "Вводьте назви жанрів українською мовою, розділяючи їх комами.")}</p>
                             </div>
 
-                            {/* Рядок 5: Опис фільму */}
                             <div>
                                 <label className="block text-xs font-black uppercase text-gray-400 tracking-wider mb-2">{t("admin.form.description", "Опис фільму *")}</label>
                                 <textarea required rows="4" name="description" value={formData.description} onChange={handleInputChange} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-blue-500 text-sm font-medium text-gray-900 bg-gray-50/30 resize-none" />
                             </div>
 
-                            {/* Кнопки збереження форми */}
                             <div className="flex items-center justify-end gap-3 border-t border-gray-100 pt-6">
-                                <button type="button" onClick={() => setEditingMovie(null)} className="px-6 py-3 border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-bold rounded-xl transition-all active:scale-95">
+                                <button type="button" onClick={handleCancelForm} className="px-6 py-3 border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-bold rounded-xl transition-all active:scale-95">
                                     {t("admin.form.cancel", "Скасувати")}
                                 </button>
                                 <button type="submit" disabled={isSaving} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl text-sm font-bold shadow-md shadow-blue-500/10 transition-all active:scale-95 disabled:opacity-50">
-                                    <Save size={16} /> {isSaving ? t("admin.form.saving", "Збереження...") : t("admin.form.save", "Зберегти зміни")}
+                                    <Save size={16} /> {isSaving ? t("admin.form.saving", "Збереження...") : t("admin.form.save", "Зберегти фільм")}
                                 </button>
                             </div>
                         </form>
@@ -298,7 +326,10 @@ export const AdminModal = ({ isOpen, onClose, movies = [], onRefresh }) => {
                                 <span className="text-sm font-bold text-gray-500">
                                     {t("admin.movies.count", "Усього фільмів:")} {displayedMovies.length}
                                 </span>
-                                <button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-md shadow-blue-500/10 transition-all">
+                                <button
+                                    onClick={handleStartAdd}
+                                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-md shadow-blue-500/10 transition-all"
+                                >
                                     <Plus size={16} /> {t("admin.movies.add", "Додати фільм")}
                                 </button>
                             </div>
