@@ -29,7 +29,7 @@
 <nav >
     
     
-    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-bookingController.html">bookingController</a></li><li><a href="module-hooks_useFilters.html">hooks/useFilters</a></li></ul><h3>Global</h3><ul><li><a href="global.html#BookingPage">BookingPage</a></li><li><a href="global.html#HomePage">HomePage</a></li><li><a href="global.html#LoginModal">LoginModal</a></li><li><a href="global.html#MovieCard">MovieCard</a></li><li><a href="global.html#SeatPicker">SeatPicker</a></li><li><a href="global.html#TheatersPage">TheatersPage</a></li><li><a href="global.html#auth">auth</a></li><li><a href="global.html#authAPI">authAPI</a></li><li><a href="global.html#authenticateToken">authenticateToken</a></li><li><a href="global.html#checkAvailability">checkAvailability</a></li><li><a href="global.html#checkDatabaseConnection">checkDatabaseConnection</a></li><li><a href="global.html#classNames">classNames</a></li><li><a href="global.html#fetchCities">fetchCities</a></li><li><a href="global.html#fetchSeats">fetchSeats</a></li><li><a href="global.html#genreAPI">genreAPI</a></li><li><a href="global.html#getAllMovies">getAllMovies</a></li><li><a href="global.html#getMovieById">getMovieById</a></li><li><a href="global.html#getProfile">getProfile</a></li><li><a href="global.html#getRecommendedMovies">getRecommendedMovies</a></li><li><a href="global.html#getShowtimes">getShowtimes</a></li><li><a href="global.html#loadContent">loadContent</a></li><li><a href="global.html#loginUser">loginUser</a></li><li><a href="global.html#minutesToHMM">minutesToHMM</a></li><li><a href="global.html#movieAPI">movieAPI</a></li><li><a href="global.html#register">register</a></li><li><a href="global.html#showtimeAPI">showtimeAPI</a></li><li><a href="global.html#theaterAPI">theaterAPI</a></li><li><a href="global.html#updateProfile">updateProfile</a></li><li><a href="global.html#useAuth">useAuth</a></li><li><a href="global.html#validateEmail">validateEmail</a></li><li><a href="global.html#validatePassword">validatePassword</a></li><li><a href="global.html#validateRating">validateRating</a></li><li><a href="global.html#validateUsername">validateUsername</a></li><li><a href="global.html#watchlistAPI">watchlistAPI</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-bookingController.html">bookingController</a></li><li><a href="module-hooks_useFilters.html">hooks/useFilters</a></li></ul><h3>Global</h3><ul><li><a href="global.html#BookingPage">BookingPage</a></li><li><a href="global.html#ConfirmationPage">ConfirmationPage</a></li><li><a href="global.html#HomePage">HomePage</a></li><li><a href="global.html#LoginModal">LoginModal</a></li><li><a href="global.html#MovieCard">MovieCard</a></li><li><a href="global.html#SeatPicker">SeatPicker</a></li><li><a href="global.html#TheatersPage">TheatersPage</a></li><li><a href="global.html#auth">auth</a></li><li><a href="global.html#authAPI">authAPI</a></li><li><a href="global.html#authenticateToken">authenticateToken</a></li><li><a href="global.html#checkAvailability">checkAvailability</a></li><li><a href="global.html#checkDatabaseConnection">checkDatabaseConnection</a></li><li><a href="global.html#classNames">classNames</a></li><li><a href="global.html#fetchCities">fetchCities</a></li><li><a href="global.html#fetchSeats">fetchSeats</a></li><li><a href="global.html#genreAPI">genreAPI</a></li><li><a href="global.html#getAllMovies">getAllMovies</a></li><li><a href="global.html#getMovieById">getMovieById</a></li><li><a href="global.html#getProfile">getProfile</a></li><li><a href="global.html#getRecommendedMovies">getRecommendedMovies</a></li><li><a href="global.html#getShowtimes">getShowtimes</a></li><li><a href="global.html#handleConfirm">handleConfirm</a></li><li><a href="global.html#handleDownloadPDF">handleDownloadPDF</a></li><li><a href="global.html#loadContent">loadContent</a></li><li><a href="global.html#logAPI">logAPI</a></li><li><a href="global.html#loginUser">loginUser</a></li><li><a href="global.html#minutesToHMM">minutesToHMM</a></li><li><a href="global.html#movieAPI">movieAPI</a></li><li><a href="global.html#register">register</a></li><li><a href="global.html#showtimeAPI">showtimeAPI</a></li><li><a href="global.html#theaterAPI">theaterAPI</a></li><li><a href="global.html#updateProfile">updateProfile</a></li><li><a href="global.html#useAuth">useAuth</a></li><li><a href="global.html#validateEmail">validateEmail</a></li><li><a href="global.html#validatePassword">validatePassword</a></li><li><a href="global.html#validateRating">validateRating</a></li><li><a href="global.html#validateUsername">validateUsername</a></li><li><a href="global.html#watchlistAPI">watchlistAPI</a></li></ul>
     
 </nav>
 
@@ -53,6 +53,8 @@ import {
 import { AnimatePresence, motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 
+import * as Sentry from "@sentry/react";
+
 import { PageHeader } from "../PageHeader";
 import { LoadingState } from "../LoadingState.jsx";
 import { EmptyState } from "../../ui/EmptyState.jsx";
@@ -61,7 +63,8 @@ import { MovieCard } from "../../movies/grid/MovieCard";
 
 import { CalendarPicker } from "./CalendarPicker";
 import { TheatersMap } from "./TheatersMap";
-import { showtimeAPI, theaterAPI, movieAPI } from "../../../services/api";
+
+import { showtimeAPI, theaterAPI, movieAPI, logAPI } from "../../../services/api";
 
 /**
  * Сторінка вибору кінотеатру та часу сеансу для конкретного фільму.
@@ -178,7 +181,7 @@ export const TheatersPage = ({
             }
 
             setError(false);
-        } catch (e) { // ВИПРАВЛЕНО: додано (e), бо змінна використовується нижче
+        } catch (e) {
             console.error("Content load error:", e);
             setError(true);
         } finally {
@@ -198,7 +201,7 @@ export const TheatersPage = ({
             try {
                 const city = await fetchCities();
                 await loadContent(city);
-            } catch { // ВИПРАВЛЕНО: видалено (e), бо вона тут не використовується
+            } catch {
                 setError(true);
                 setIsLoading(false);
             }
@@ -222,7 +225,41 @@ export const TheatersPage = ({
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    if (error) return &lt;ErrorState onRetry={() => window.location.reload()} onBack={() => setStep("home")} />;
+    if (error) {
+        return (
+            &lt;ErrorState
+                type="500"
+                onRetry={() => window.location.reload()}
+                onBack={() => setStep("home")}
+                onReport={() => {
+                    // 1. Лог у Better Stack
+                    logAPI.sendError("Користувач повідомив про проблему на сторінці Кінотеатрів", {
+                        page: "TheatersPage",
+                        movieId: propMovie?.id,
+                        cityId: selectedCity?.id,
+                        selectedDate: selectedDate,
+                        action: "User clicked report button"
+                    });
+
+                    // 2. Форма Sentry
+                    const eventId = Sentry.captureMessage("User Feedback: Issue on TheatersPage");
+
+                    Sentry.showReportDialog({
+                        eventId,
+                        title: "Повідомити про проблему",
+                        subtitle: "Будь ласка, опишіть кроки, які призвели до цієї помилки.",
+                        subtitle2: "Це допоможе нам швидко все полагодити.",
+                        labelName: "Ваше ім'я",
+                        labelEmail: "Ваш Email",
+                        labelComments: "Що пішло не так? (Кроки відтворення)",
+                        labelSubmit: "Відправити звіт",
+                        labelClose: "Закрити",
+                        successMessage: "Дякуємо! Ваш звіт та технічні дані успішно відправлено."
+                    });
+                }}
+            />
+        );
+    }
 
     if (!propMovie &amp;&amp; !isLoading) {
         return (
@@ -310,7 +347,7 @@ export const TheatersPage = ({
                 &lt;/h4>
 
                 &lt;div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                    {recommended.map((m) => (
+                    {Array.isArray(recommended) &amp;&amp; recommended.map((m) => (
                         &lt;MovieCard
                             key={m.id}
                             movie={m}
@@ -336,7 +373,7 @@ export const TheatersPage = ({
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Sun Feb 22 2026 14:58:21 GMT+0000 (Coordinated Universal Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Mon May 18 2026 11:52:14 GMT+0000 (Coordinated Universal Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
 </footer>
 
 <script>prettyPrint();</script>

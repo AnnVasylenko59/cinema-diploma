@@ -29,7 +29,7 @@
 <nav >
     
     
-    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-bookingController.html">bookingController</a></li><li><a href="module-hooks_useFilters.html">hooks/useFilters</a></li></ul><h3>Global</h3><ul><li><a href="global.html#BookingPage">BookingPage</a></li><li><a href="global.html#HomePage">HomePage</a></li><li><a href="global.html#LoginModal">LoginModal</a></li><li><a href="global.html#MovieCard">MovieCard</a></li><li><a href="global.html#SeatPicker">SeatPicker</a></li><li><a href="global.html#TheatersPage">TheatersPage</a></li><li><a href="global.html#auth">auth</a></li><li><a href="global.html#authAPI">authAPI</a></li><li><a href="global.html#authenticateToken">authenticateToken</a></li><li><a href="global.html#checkAvailability">checkAvailability</a></li><li><a href="global.html#checkDatabaseConnection">checkDatabaseConnection</a></li><li><a href="global.html#classNames">classNames</a></li><li><a href="global.html#fetchCities">fetchCities</a></li><li><a href="global.html#fetchSeats">fetchSeats</a></li><li><a href="global.html#genreAPI">genreAPI</a></li><li><a href="global.html#getAllMovies">getAllMovies</a></li><li><a href="global.html#getMovieById">getMovieById</a></li><li><a href="global.html#getProfile">getProfile</a></li><li><a href="global.html#getRecommendedMovies">getRecommendedMovies</a></li><li><a href="global.html#getShowtimes">getShowtimes</a></li><li><a href="global.html#loadContent">loadContent</a></li><li><a href="global.html#loginUser">loginUser</a></li><li><a href="global.html#minutesToHMM">minutesToHMM</a></li><li><a href="global.html#movieAPI">movieAPI</a></li><li><a href="global.html#register">register</a></li><li><a href="global.html#showtimeAPI">showtimeAPI</a></li><li><a href="global.html#theaterAPI">theaterAPI</a></li><li><a href="global.html#updateProfile">updateProfile</a></li><li><a href="global.html#useAuth">useAuth</a></li><li><a href="global.html#validateEmail">validateEmail</a></li><li><a href="global.html#validatePassword">validatePassword</a></li><li><a href="global.html#validateRating">validateRating</a></li><li><a href="global.html#validateUsername">validateUsername</a></li><li><a href="global.html#watchlistAPI">watchlistAPI</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-bookingController.html">bookingController</a></li><li><a href="module-hooks_useFilters.html">hooks/useFilters</a></li></ul><h3>Global</h3><ul><li><a href="global.html#BookingPage">BookingPage</a></li><li><a href="global.html#ConfirmationPage">ConfirmationPage</a></li><li><a href="global.html#HomePage">HomePage</a></li><li><a href="global.html#LoginModal">LoginModal</a></li><li><a href="global.html#MovieCard">MovieCard</a></li><li><a href="global.html#SeatPicker">SeatPicker</a></li><li><a href="global.html#TheatersPage">TheatersPage</a></li><li><a href="global.html#auth">auth</a></li><li><a href="global.html#authAPI">authAPI</a></li><li><a href="global.html#authenticateToken">authenticateToken</a></li><li><a href="global.html#checkAvailability">checkAvailability</a></li><li><a href="global.html#checkDatabaseConnection">checkDatabaseConnection</a></li><li><a href="global.html#classNames">classNames</a></li><li><a href="global.html#fetchCities">fetchCities</a></li><li><a href="global.html#fetchSeats">fetchSeats</a></li><li><a href="global.html#genreAPI">genreAPI</a></li><li><a href="global.html#getAllMovies">getAllMovies</a></li><li><a href="global.html#getMovieById">getMovieById</a></li><li><a href="global.html#getProfile">getProfile</a></li><li><a href="global.html#getRecommendedMovies">getRecommendedMovies</a></li><li><a href="global.html#getShowtimes">getShowtimes</a></li><li><a href="global.html#handleConfirm">handleConfirm</a></li><li><a href="global.html#handleDownloadPDF">handleDownloadPDF</a></li><li><a href="global.html#loadContent">loadContent</a></li><li><a href="global.html#logAPI">logAPI</a></li><li><a href="global.html#loginUser">loginUser</a></li><li><a href="global.html#minutesToHMM">minutesToHMM</a></li><li><a href="global.html#movieAPI">movieAPI</a></li><li><a href="global.html#register">register</a></li><li><a href="global.html#showtimeAPI">showtimeAPI</a></li><li><a href="global.html#theaterAPI">theaterAPI</a></li><li><a href="global.html#updateProfile">updateProfile</a></li><li><a href="global.html#useAuth">useAuth</a></li><li><a href="global.html#validateEmail">validateEmail</a></li><li><a href="global.html#validatePassword">validatePassword</a></li><li><a href="global.html#validateRating">validateRating</a></li><li><a href="global.html#validateUsername">validateUsername</a></li><li><a href="global.html#watchlistAPI">watchlistAPI</a></li></ul>
     
 </nav>
 
@@ -50,11 +50,15 @@ import axios from "axios";
 import { Ticket, AlertTriangle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
+import * as Sentry from "@sentry/react";
+
 import { SeatPicker } from "./SeatPicker.jsx";
 import { PageHeader } from "../PageHeader.jsx";
 import { LoadingState } from "../LoadingState.jsx";
 import { BookingSummary } from "./BookingSummary.jsx";
 import { ErrorState } from "../../ui/ErrorState.jsx";
+
+import { logAPI } from "../../../services/api.js";
 
 /**
  * Сторінка вибору місць у залі для обраного сеансу.
@@ -63,9 +67,10 @@ import { ErrorState } from "../../ui/ErrorState.jsx";
  * @param {Object} props.chosenShowtime - Дані обраного сеансу.
  * @param {Function} props.setStep - Функція перемикання кроків бронювання.
  * @param {Function} props.onConfirmSeats - Коллбек для підтвердження вибору місць.
+ * @param {Function} props.onBookingCreated - Коллбек для передачі bookingId в батьківський компонент.
  * @returns {JSX.Element|null} Інтерфейс вибору місць або стан помилки/завантаження.
  */
-export const BookingPage = ({ chosenShowtime, setStep, onConfirmSeats }) => {
+export const BookingPage = ({ chosenShowtime, setStep, onConfirmSeats, onBookingCreated }) => {
     const { t, i18n } = useTranslation();
     const [fullShowtime, setFullShowtime] = useState(null);
     const [selectedSeats, setSelectedSeats] = useState([]);
@@ -73,16 +78,21 @@ export const BookingPage = ({ chosenShowtime, setStep, onConfirmSeats }) => {
     const [error, setError] = useState(false);
 
     const currentLocale = i18n.language === 'en' ? 'en-US' : 'uk-UA';
-    const isPastSession = new Date(chosenShowtime.startTime) &lt; new Date();
+
+    // Безпечна перевірка дати
+    const isPastSession = chosenShowtime?.startTime
+        ? new Date(chosenShowtime.startTime) &lt; new Date()
+        : false;
 
     /**
+     * ### СКЛАДНИЙ АЛГОРИТМ: Синхронізація схеми зали.
      * Завантажує актуальні дані про зайняті місця з сервера.
      * @async
      * @function fetchSeats
      * @returns {Promise&lt;void>} Оновлює локальний стан даними сеансу.
      */
     const fetchSeats = useCallback(async () => {
-        if (isPastSession) {
+        if (!chosenShowtime?.id || isPastSession) {
             setIsLoading(false);
             return;
         }
@@ -92,7 +102,8 @@ export const BookingPage = ({ chosenShowtime, setStep, onConfirmSeats }) => {
         try {
             const res = await axios.get(`http://localhost:5000/api/bookings/showtime/${chosenShowtime.id}`);
             setFullShowtime(res.data);
-        } catch {
+        } catch (err) {
+            console.error("Fetch seats error:", err);
             setError(true);
         } finally {
             setIsLoading(false);
@@ -103,6 +114,43 @@ export const BookingPage = ({ chosenShowtime, setStep, onConfirmSeats }) => {
         if (chosenShowtime?.id) fetchSeats();
     }, [chosenShowtime?.id, fetchSeats]);
 
+    /**
+     * Обробник підтвердження бронювання з отриманням bookingId.
+     * @async
+     * @function handleConfirm
+     * @param {Array} seats - Вибрані місця для бронювання.
+     * @returns {Promise&lt;void>}
+     */
+    const handleConfirm = async (seats) => {
+        try {
+            const result = await onConfirmSeats(seats);
+
+            if (result?.bookingId) {
+                localStorage.setItem('lastBookingId', result.bookingId);
+
+                if (onBookingCreated) {
+                    onBookingCreated(result.bookingId);
+                }
+            } else {
+                console.warn('⚠️ bookingId не отримано від сервера');
+            }
+
+            return result;
+        } catch (error) {
+            console.error('❌ Помилка при створенні бронювання:', error);
+
+            // Логування помилки
+            logAPI.sendError("Помилка при створенні бронювання", {
+                page: "BookingPage",
+                showtimeId: chosenShowtime?.id,
+                seatsCount: seats?.length,
+                error: error.message
+            });
+
+            throw error;
+        }
+    };
+
     if (isPastSession) {
         return &lt;ErrorState
             title={t('booking.session_expired_title')}
@@ -111,7 +159,39 @@ export const BookingPage = ({ chosenShowtime, setStep, onConfirmSeats }) => {
         />;
     }
 
-    if (error) return &lt;ErrorState onRetry={fetchSeats} onBack={() => setStep("theaters")} />;
+    if (error) {
+        return (
+            &lt;ErrorState
+                type="500"
+                onRetry={fetchSeats}
+                onBack={() => setStep("theaters")}
+                onReport={() => {
+                    // 1. Лог у Better Stack
+                    logAPI.sendError("Користувач повідомив про проблему на сторінці Бронювання", {
+                        page: "BookingPage",
+                        showtimeId: chosenShowtime?.id,
+                        action: "User clicked report button"
+                    });
+
+                    // 2. Форма Sentry
+                    const eventId = Sentry.captureMessage("User Feedback: Issue on BookingPage");
+
+                    Sentry.showReportDialog({
+                        eventId,
+                        title: "Повідомити про проблему",
+                        subtitle: "Будь ласка, опишіть кроки, які призвели до цієї помилки.",
+                        subtitle2: "Це допоможе нам швидко все полагодити.",
+                        labelName: "Ваше ім'я",
+                        labelEmail: "Ваш Email",
+                        labelComments: "Що пішло не так? (Кроки відтворення)",
+                        labelSubmit: "Відправити звіт",
+                        labelClose: "Закрити",
+                        successMessage: "Дякуємо! Ваш звіт та технічні дані успішно відправлено."
+                    });
+                }}
+            />
+        );
+    }
 
     if (isLoading) return &lt;LoadingState label={t('theaters.sync')} />;
 
@@ -137,11 +217,11 @@ export const BookingPage = ({ chosenShowtime, setStep, onConfirmSeats }) => {
                     />
                 &lt;/div>
 
-                {/* Винесена бокова панель */}
+                {/* Бокова панель */}
                 &lt;BookingSummary
                     fullShowtime={fullShowtime}
                     selectedSeats={selectedSeats}
-                    onConfirm={onConfirmSeats}
+                    onConfirm={handleConfirm}
                     locale={currentLocale}
                 />
             &lt;/div>
@@ -161,7 +241,7 @@ export const BookingPage = ({ chosenShowtime, setStep, onConfirmSeats }) => {
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Sun Feb 22 2026 14:58:21 GMT+0000 (Coordinated Universal Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Mon May 18 2026 11:52:14 GMT+0000 (Coordinated Universal Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
 </footer>
 
 <script>prettyPrint();</script>

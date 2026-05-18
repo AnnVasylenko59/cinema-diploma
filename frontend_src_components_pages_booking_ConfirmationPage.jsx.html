@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    
+    <meta charset="utf-8">
+    <title>frontend/src/components/pages/booking/ConfirmationPage.jsx - Documentation</title>
+    
+    
+    <script src="scripts/prettify/prettify.js"></script>
+    <script src="scripts/prettify/lang-css.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc.css">
+    <script src="scripts/nav.js" defer></script>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+
+<input type="checkbox" id="nav-trigger" class="nav-trigger" />
+<label for="nav-trigger" class="navicon-button x">
+  <div class="navicon"></div>
+</label>
+
+<label for="nav-trigger" class="overlay"></label>
+
+<nav >
+    
+    
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-bookingController.html">bookingController</a></li><li><a href="module-hooks_useFilters.html">hooks/useFilters</a></li></ul><h3>Global</h3><ul><li><a href="global.html#BookingPage">BookingPage</a></li><li><a href="global.html#ConfirmationPage">ConfirmationPage</a></li><li><a href="global.html#HomePage">HomePage</a></li><li><a href="global.html#LoginModal">LoginModal</a></li><li><a href="global.html#MovieCard">MovieCard</a></li><li><a href="global.html#SeatPicker">SeatPicker</a></li><li><a href="global.html#TheatersPage">TheatersPage</a></li><li><a href="global.html#auth">auth</a></li><li><a href="global.html#authAPI">authAPI</a></li><li><a href="global.html#authenticateToken">authenticateToken</a></li><li><a href="global.html#checkAvailability">checkAvailability</a></li><li><a href="global.html#checkDatabaseConnection">checkDatabaseConnection</a></li><li><a href="global.html#classNames">classNames</a></li><li><a href="global.html#fetchCities">fetchCities</a></li><li><a href="global.html#fetchSeats">fetchSeats</a></li><li><a href="global.html#genreAPI">genreAPI</a></li><li><a href="global.html#getAllMovies">getAllMovies</a></li><li><a href="global.html#getMovieById">getMovieById</a></li><li><a href="global.html#getProfile">getProfile</a></li><li><a href="global.html#getRecommendedMovies">getRecommendedMovies</a></li><li><a href="global.html#getShowtimes">getShowtimes</a></li><li><a href="global.html#handleConfirm">handleConfirm</a></li><li><a href="global.html#handleDownloadPDF">handleDownloadPDF</a></li><li><a href="global.html#loadContent">loadContent</a></li><li><a href="global.html#logAPI">logAPI</a></li><li><a href="global.html#loginUser">loginUser</a></li><li><a href="global.html#minutesToHMM">minutesToHMM</a></li><li><a href="global.html#movieAPI">movieAPI</a></li><li><a href="global.html#register">register</a></li><li><a href="global.html#showtimeAPI">showtimeAPI</a></li><li><a href="global.html#theaterAPI">theaterAPI</a></li><li><a href="global.html#updateProfile">updateProfile</a></li><li><a href="global.html#useAuth">useAuth</a></li><li><a href="global.html#validateEmail">validateEmail</a></li><li><a href="global.html#validatePassword">validatePassword</a></li><li><a href="global.html#validateRating">validateRating</a></li><li><a href="global.html#validateUsername">validateUsername</a></li><li><a href="global.html#watchlistAPI">watchlistAPI</a></li></ul>
+    
+</nav>
+
+<div id="main">
+    
+    <h1 class="page-title">frontend/src/components/pages/booking/ConfirmationPage.jsx</h1>
+    
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import React, { useState } from "react";
+import { motion } from "framer-motion";
+import { Home, Download, Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { Button } from "../../ui/Atoms";
+import { styles } from "./ConfirmationStyles";
+import { SuccessBadge } from "./SuccessBadge";
+
+/**
+ * Сторінка успішного підтвердження транзакції та генерації звітних документів.
+ * @component
+ * @param {Object} props - Властивості компонента.
+ * @param {Function} props.setStep - Перемикання кроків (на головну сторінку).
+ * @param {number|string} props.bookingId - Унікальний ідентифікатор транзакції для рендерингу PDF.
+ * @returns {JSX.Element} Екран фіналізації замовлення.
+ */
+export const ConfirmationPage = ({ setStep, bookingId }) => {
+    const { t } = useTranslation();
+    const [isDownloading, setIsDownloading] = useState(false);
+
+    /**
+     * ### НАУКОВО-ПРИКЛАДНИЙ МОДУЛЬ: Отримання бінарного потоку.
+     * Виконує асинхронний запит до API шару безпеки для отримання сгенерованого PDF файлу.
+     * @async
+     * @function handleDownloadPDF
+     */
+    const handleDownloadPDF = async () => {
+        console.log('Booking ID:', bookingId);
+        console.log('Token exists:', !!localStorage.getItem('authToken'));
+        const currentBookingId = bookingId || localStorage.getItem('lastBookingId');
+
+        if (!currentBookingId) {
+            alert("Помилка: ID бронювання не знайдено. Ви можете завантажити квиток з історії в особистому кабінеті.");
+            return;
+        }
+
+        try {
+            setIsDownloading(true);
+            const token = localStorage.getItem('authToken');
+
+            const response = await fetch(`http://localhost:5000/api/bookings/${currentBookingId}/pdf`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error("Не вдалося завантажити файл квитка");
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `ticket-${currentBookingId}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+
+            link.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error('Помилка завантаження PDF:', err);
+            alert("Не вдалося завантажити PDF-квиток. Перевірте з'єднання з сервером.");
+        } finally {
+            setIsDownloading(false);
+        }
+    };
+
+    return (
+        &lt;div className="max-w-2xl mx-auto px-4 py-12 flex items-center justify-center min-h-[50vh]">
+            &lt;motion.div
+                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                className={`${styles.card} w-full text-center flex flex-col items-center p-8 md:p-12 relative overflow-hidden`}
+            >
+                &lt;div className={styles.glow} />
+
+                &lt;div className="relative z-10 flex flex-col items-center space-y-8 w-full">
+                    &lt;div className="flex justify-center w-full">
+                        &lt;SuccessBadge />
+                    &lt;/div>
+
+                    &lt;div className="space-y-3 text-center w-full flex flex-col items-center">
+                        &lt;h3 className="text-2xl md:text-3xl font-black text-slate-900 uppercase tracking-tight leading-tight max-w-md text-center">
+                            {t('booking.confirm_title')}
+                        &lt;/h3>
+                        &lt;p className="text-sm text-slate-500 font-medium max-w-sm text-center">
+                            {t('booking.confirm_subtitle') || "Ваше замовлення успішно оформлено. Електронний квиток з QR-кодом сформовано."}
+                        &lt;/p>
+                    &lt;/div>
+
+                    &lt;div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-2 w-full max-w-md">
+                        &lt;button
+                            onClick={() => setStep("home")}
+                            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-slate-900 text-white hover:bg-slate-800 rounded-2xl transition-all font-bold shadow-sm text-xs uppercase tracking-wider whitespace-nowrap"
+                        >
+                            &lt;Home size={16} />
+                            {t('profile.buttons.home')}
+                        &lt;/button>
+
+                        &lt;button
+                            onClick={handleDownloadPDF}
+                            disabled={isDownloading}
+                            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-2xl transition-all font-bold shadow-sm text-xs uppercase tracking-wider disabled:opacity-50 whitespace-nowrap"
+                        >
+                            {isDownloading ? (
+                                &lt;Loader2 size={16} className="animate-spin text-blue-600" />
+                            ) : (
+                                &lt;Download size={16} className="text-blue-600" />
+                            )}
+                            {isDownloading ? "Завантаження..." : t('booking.download_pdf') || "Квиток PDF"}
+                        &lt;/button>
+                    &lt;/div>
+                &lt;/div>
+            &lt;/motion.div>
+        &lt;/div>
+    );
+};</code></pre>
+        </article>
+    </section>
+
+
+
+
+    
+    
+</div>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Mon May 18 2026 11:52:14 GMT+0000 (Coordinated Universal Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+</footer>
+
+<script>prettyPrint();</script>
+<script src="scripts/polyfill.js"></script>
+<script src="scripts/linenumber.js"></script>
+
+
+
+</body>
+</html>
