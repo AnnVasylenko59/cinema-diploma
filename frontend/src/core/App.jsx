@@ -294,10 +294,10 @@ export default function App() {
                     isOpen
                     onClose={() => setProfileModal(null)}
                     movies={movies}
+                    genres={genres}
                     onRefresh={loadInitialData}
                 />
             )}
-
             <Footer />
         </div>
     );
