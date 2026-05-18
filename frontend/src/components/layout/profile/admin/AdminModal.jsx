@@ -1,25 +1,39 @@
 import React, { useState, useEffect, useRef } from "react";
-import { X, Film, BarChart3, Plus, Trash2, Edit2, TrendingUp, DollarSign, Ticket, Clock, Undo2 } from "lucide-react";
+import { X, Film, BarChart3, Plus, Trash2, Edit2, TrendingUp, DollarSign, Ticket, Clock, Undo2, Save, ArrowLeft } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import axios from "axios";
 
 /**
- * КОМПОНЕНТ: Модальне вікно панелі адміністратора з функцією "Undo Delete" (15 сек).
+ * КОМПОНЕНТ: Модальне вікно панелі адміністратора з функціями Undo Delete та повного редагування.
+ * @param {Object} props - Пропси компонента.
+ * @param {boolean} props.isOpen - Статус видимості.
+ * @param {Function} props.onClose - Закриття вікна.
+ * @param {Array} props.movies - Масив актуальних фільмів.
+ * @param {Function} props.onRefresh - Функція для рефрешу списку фільмів.
+ * @returns {React.JSX.Element|null} Елемент інтерфейсу або null.
  */
 export const AdminModal = ({ isOpen, onClose, movies = [], onRefresh }) => {
     const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState("movies");
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+
+    // Стейти для режиму редагування
+    const [editingMovie, setEditingMovie] = useState(null);
+    const [formData, setFormData] = useState({
+        title: "", year: "", durationMin: "", backdropUrl: "",
+        posterUrl: "", trailerUrl: "", description: "", rating: "", director: "", genres: ""
+    });
 
     // Стейти для механізму скасування видалення (Undo)
-    const [pendingDelete, setPendingDelete] = useState(null); // Зберігає об'єкт фільму, який "у черзі"
-    const [timeLeft, setTimeLeft] = useState(15); // Зворотний відлік
+    const [pendingDelete, setPendingDelete] = useState(null);
+    const [timeLeft, setTimeLeft] = useState(15);
 
     const deleteTimerRef = useRef(null);
     const countdownIntervalRef = useRef(null);
 
-    // Функція фінального (реального) видалення на сервері
+    // Функція фінального видалення на сервері
     const executeRealDelete = async (movieId) => {
         setIsDeleting(true);
         try {
@@ -27,7 +41,7 @@ export const AdminModal = ({ isOpen, onClose, movies = [], onRefresh }) => {
             await axios.delete(`http://localhost:5000/api/movies/${movieId}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            onRefresh?.(); // Оновлюємо глобальний список фільмів
+            onRefresh?.();
         } catch (error) {
             console.error("Delete error:", error);
             alert(error.response?.data?.error || "Помилка при остаточному видаленні фільму");
@@ -37,47 +51,87 @@ export const AdminModal = ({ isOpen, onClose, movies = [], onRefresh }) => {
         }
     };
 
-    // Клік на кнопку видалення в таблиці
     const handleActionDelete = (movie) => {
-        // Якщо вже є фільм у черзі на видалення — видаляємо його негайно, щоб звільнити місце новому
         if (pendingDelete) {
             clearTimeout(deleteTimerRef.current);
             clearInterval(countdownIntervalRef.current);
             executeRealDelete(pendingDelete.id);
         }
 
-        // Ініціалізуємо чергу для поточного фільму
         setPendingDelete(movie);
         setTimeLeft(15);
 
-        // Запускаємо інтервал для лічильника секунд на екрані
         countdownIntervalRef.current = setInterval(() => {
-            setTimeLeft((prev) => {
-                if (prev <= 1) {
-                    clearInterval(countdownIntervalRef.current);
-                    return 0;
-                }
-                return prev - 1;
-            });
+            setTimeLeft((prev) => (prev <= 1 ? (clearInterval(countdownIntervalRef.current), 0) : prev - 1));
         }, 1000);
 
-        // Запускаємо таймер на 15 секунд для виконання реального запиту
         deleteTimerRef.current = setTimeout(() => {
             clearInterval(countdownIntervalRef.current);
             executeRealDelete(movie.id);
         }, 15000);
     };
 
-    // Клік на кнопку "Відновити"
     const handleUndo = () => {
         clearTimeout(deleteTimerRef.current);
         clearInterval(countdownIntervalRef.current);
-        setPendingDelete(null); // Просто очищаємо чергу, фільм знову з'явиться в таблиці
+        setPendingDelete(null);
     };
 
-    // Безпечне закриття модалки
+    // Ініціалізація форми даними обраного фільму
+    const handleStartEdit = (movie) => {
+        setEditingMovie(movie);
+        setFormData({
+            title: movie.title || "",
+            year: movie.year || "",
+            durationMin: movie.durationMin || "",
+            backdropUrl: movie.backdropUrl || "",
+            posterUrl: movie.posterUrl || "",
+            trailerUrl: movie.trailerUrl || "",
+            description: movie.description || "",
+            rating: movie.rating || "",
+            director: movie.director || "",
+            genres: movie.genres ? movie.genres.map(mg => mg.genre.name).join(", ") : ""
+        });
+    };
+
+    // Обробник зміни полів форми
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    // Сабміт оновлених даних на сервер
+    const handleSaveEdit = async (e) => {
+        e.preventDefault();
+        setIsSaving(true);
+        try {
+            const token = localStorage.getItem('authToken');
+
+            // Форматування даних (числа та масив жанрів) перед відправкою
+            const formattedData = {
+                ...formData,
+                year: formData.year ? parseInt(formData.year, 10) : undefined,
+                durationMin: formData.durationMin ? parseInt(formData.durationMin, 10) : undefined,
+                rating: formData.rating ? parseFloat(formData.rating) : null,
+                genres: formData.genres ? formData.genres.split(",").map(g => g.trim()).filter(Boolean) : []
+            };
+
+            await axios.put(`http://localhost:5000/api/movies/${editingMovie.id}`, formattedData, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            alert(t("admin.movies.edit_success", "Дані фільму успішно оновлено!"));
+            setEditingMovie(null);
+            onRefresh?.();
+        } catch (error) {
+            console.error("Update error:", error);
+            alert(error.response?.data?.error || "Помилка при збереженні змін фільму");
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     const handleSafeClose = () => {
-        // Якщо адмін закриває вікно, а в черзі висить фільм — видаляємо його негайно
         if (pendingDelete) {
             clearTimeout(deleteTimerRef.current);
             clearInterval(countdownIntervalRef.current);
@@ -86,7 +140,6 @@ export const AdminModal = ({ isOpen, onClose, movies = [], onRefresh }) => {
         onClose();
     };
 
-    // Очищення таймерів при демонтажі компонента (запобігає витоку пам'яті)
     useEffect(() => {
         return () => {
             clearTimeout(deleteTimerRef.current);
@@ -96,7 +149,6 @@ export const AdminModal = ({ isOpen, onClose, movies = [], onRefresh }) => {
 
     if (!isOpen) return null;
 
-    // Фільтруємо список фільмів на екрані: ховаємо той, що зараз у черзі на видалення
     const displayedMovies = movies.filter(m => m.id !== pendingDelete?.id);
 
     const mockStats = {
@@ -120,8 +172,12 @@ export const AdminModal = ({ isOpen, onClose, movies = [], onRefresh }) => {
                             <Film size={20} />
                         </div>
                         <div>
-                            <h2 className="text-xl font-black tracking-tight text-gray-900">{t("admin.title", "Панель адміністратора")}</h2>
-                            <p className="text-xs text-gray-400 font-medium">{t("admin.subtitle", "Керування кінотеатром та аналітика")}</p>
+                            <h2 className="text-xl font-black tracking-tight text-gray-900">
+                                {editingMovie ? t("admin.title.edit", "Редагування фільму") : t("admin.title", "Панель адміністратора")}
+                            </h2>
+                            <p className="text-xs text-gray-400 font-medium">
+                                {editingMovie ? `${t("admin.subtitle.editing", "Зміна параметрів для:")} ${editingMovie.title}` : t("admin.subtitle", "Керування кінотеатром та аналітика")}
+                            </p>
                         </div>
                     </div>
                     <button
@@ -132,29 +188,111 @@ export const AdminModal = ({ isOpen, onClose, movies = [], onRefresh }) => {
                     </button>
                 </div>
 
-                {/* Таби */}
-                <div className="px-8 bg-gray-50/50 border-b border-gray-100 flex gap-4">
-                    <button
-                        onClick={() => setActiveTab("movies")}
-                        className={`flex items-center gap-2 py-4 font-bold text-sm border-b-2 transition-all ${
-                            activeTab === "movies" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-900"
-                        }`}
-                    >
-                        <Film size={16} /> {t("admin.tabs.movies", "Керування фільмами")}
-                    </button>
-                    <button
-                        onClick={() => setActiveTab("stats")}
-                        className={`flex items-center gap-2 py-4 font-bold text-sm border-b-2 transition-all ${
-                            activeTab === "stats" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-900"
-                        }`}
-                    >
-                        <BarChart3 size={16} /> {t("admin.tabs.stats", "Статистика та аналітика")}
-                    </button>
-                </div>
+                {/* Таби відображаються лише якщо ми не в режимі редагування */}
+                {!editingMovie && (
+                    <div className="px-8 bg-gray-50/50 border-b border-gray-100 flex gap-4">
+                        <button
+                            onClick={() => setActiveTab("movies")}
+                            className={`flex items-center gap-2 py-4 font-bold text-sm border-b-2 transition-all ${
+                                activeTab === "movies" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-900"
+                            }`}
+                        >
+                            <Film size={16} /> {t("admin.tabs.movies", "Керування фільмами")}
+                        </button>
+                        <button
+                            onClick={() => setActiveTab("stats")}
+                            className={`flex items-center gap-2 py-4 font-bold text-sm border-b-2 transition-all ${
+                                activeTab === "stats" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-900"
+                            }`}
+                        >
+                            <BarChart3 size={16} /> {t("admin.tabs.stats", "Статистика та аналітика")}
+                        </button>
+                    </div>
+                )}
 
-                {/* Основний контент */}
+                {/* Основний блок контенту */}
                 <div className="flex-1 overflow-y-auto p-8 bg-gray-50/30">
-                    {activeTab === "movies" ? (
+                    {editingMovie ? (
+                        /* ФОРМА РЕДАГУВАННЯ ФІЛЬМУ */
+                        <form onSubmit={handleSaveEdit} className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm space-y-6 max-w-4xl mx-auto">
+                            <div className="flex items-center justify-between border-b border-gray-100 pb-4 mb-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setEditingMovie(null)}
+                                    className="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-gray-900 transition-colors"
+                                >
+                                    <ArrowLeft size={16} /> {t("admin.form.back", "Назад до списку")}
+                                </button>
+                                <span className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-md uppercase tracking-wider">ID: {editingMovie.id}</span>
+                            </div>
+
+                            {/* Рядок 1: Назва фільму */}
+                            <div>
+                                <label className="block text-xs font-black uppercase text-gray-400 tracking-wider mb-2">{t("admin.form.title", "Назва фільму *")}</label>
+                                <input required type="text" name="title" value={formData.title} onChange={handleInputChange} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-blue-500 font-bold text-gray-900 text-sm bg-gray-50/30 transition-all" />
+                            </div>
+
+                            {/* Рядок 2: Режисер, Рік, Тривалість, Рейтинг */}
+                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                                <div>
+                                    <label className="block text-xs font-black uppercase text-gray-400 tracking-wider mb-2">{t("admin.form.director", "Режисер")}</label>
+                                    <input type="text" name="director" value={formData.director} onChange={handleInputChange} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-blue-500 text-sm font-medium text-gray-900 bg-gray-50/30" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-black uppercase text-gray-400 tracking-wider mb-2">{t("admin.form.year", "Рік випуску *")}</label>
+                                    <input required type="number" name="year" value={formData.year} onChange={handleInputChange} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-blue-500 text-sm font-medium text-gray-900 bg-gray-50/30" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-black uppercase text-gray-400 tracking-wider mb-2">{t("admin.form.duration", "Тривалість (хв) *")}</label>
+                                    <input required type="number" name="durationMin" value={formData.durationMin} onChange={handleInputChange} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-blue-500 text-sm font-medium text-gray-900 bg-gray-50/30" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-black uppercase text-gray-400 tracking-wider mb-2">{t("admin.form.rating", "Рейтинг")}</label>
+                                    <input type="number" step="0.1" min="0" max="10" name="rating" value={formData.rating} onChange={handleInputChange} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-blue-500 text-sm font-medium text-gray-900 bg-gray-50/30" />
+                                </div>
+                            </div>
+
+                            {/* Рядок 3: Медіа URL посилання */}
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-xs font-black uppercase text-gray-400 tracking-wider mb-2">{t("admin.form.poster", "Посилання на постер (Poster URL)")}</label>
+                                    <input type="text" name="posterUrl" value={formData.posterUrl} onChange={handleInputChange} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-blue-500 text-xs font-medium text-gray-600 bg-gray-50/30" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-black uppercase text-gray-400 tracking-wider mb-2">{t("admin.form.backdrop", "Посилання на бекдроп (Backdrop URL)")}</label>
+                                    <input type="text" name="backdropUrl" value={formData.backdropUrl} onChange={handleInputChange} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-blue-500 text-xs font-medium text-gray-600 bg-gray-50/30" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-black uppercase text-gray-400 tracking-wider mb-2">{t("admin.form.trailer", "Посилання на трейлер YouTube (Trailer URL)")}</label>
+                                    <input type="text" name="trailerUrl" value={formData.trailerUrl} onChange={handleInputChange} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-blue-500 text-xs font-medium text-gray-600 bg-gray-50/30" />
+                                </div>
+                            </div>
+
+                            {/* Рядок 4: Жанри */}
+                            <div>
+                                <label className="block text-xs font-black uppercase text-gray-400 tracking-wider mb-2">{t("admin.form.genres", "Жанри (через кому)")}</label>
+                                <input type="text" name="genres" value={formData.genres} onChange={handleInputChange} placeholder="Екшн, Драма, Фантастика" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-blue-500 text-sm font-bold text-gray-700 bg-gray-50/30" />
+                                <p className="text-[10px] text-gray-400 mt-1 font-medium">{t("admin.form.genres_tip", "Вводьте назви жанрів українською мовою, розділяючи їх комами.")}</p>
+                            </div>
+
+                            {/* Рядок 5: Опис фільму */}
+                            <div>
+                                <label className="block text-xs font-black uppercase text-gray-400 tracking-wider mb-2">{t("admin.form.description", "Опис фільму *")}</label>
+                                <textarea required rows="4" name="description" value={formData.description} onChange={handleInputChange} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:border-blue-500 text-sm font-medium text-gray-900 bg-gray-50/30 resize-none" />
+                            </div>
+
+                            {/* Кнопки збереження форми */}
+                            <div className="flex items-center justify-end gap-3 border-t border-gray-100 pt-6">
+                                <button type="button" onClick={() => setEditingMovie(null)} className="px-6 py-3 border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-bold rounded-xl transition-all active:scale-95">
+                                    {t("admin.form.cancel", "Скасувати")}
+                                </button>
+                                <button type="submit" disabled={isSaving} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl text-sm font-bold shadow-md shadow-blue-500/10 transition-all active:scale-95 disabled:opacity-50">
+                                    <Save size={16} /> {isSaving ? t("admin.form.saving", "Збереження...") : t("admin.form.save", "Зберегти зміни")}
+                                </button>
+                            </div>
+                        </form>
+                    ) : activeTab === "movies" ? (
+                        /* ТАБЛИЦЯ СПИСКУ ФІЛЬМІВ */
                         <div className="space-y-6">
                             <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
                                 <span className="text-sm font-bold text-gray-500">
@@ -212,6 +350,7 @@ export const AdminModal = ({ isOpen, onClose, movies = [], onRefresh }) => {
                                                 <td className="px-6 py-4 text-right">
                                                     <div className="flex items-center justify-end gap-2">
                                                         <button
+                                                            onClick={() => handleStartEdit(movie)}
                                                             className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
                                                             title={t("admin.actions.edit", "Редагувати")}
                                                         >
@@ -235,7 +374,7 @@ export const AdminModal = ({ isOpen, onClose, movies = [], onRefresh }) => {
                             </div>
                         </div>
                     ) : (
-                        /* Вкладка статистики (без змін) */
+                        /* ВКЛАДКА СТАТИСТИКИ */
                         <div className="space-y-8">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                                 <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
@@ -270,7 +409,7 @@ export const AdminModal = ({ isOpen, onClose, movies = [], onRefresh }) => {
                     )}
                 </div>
 
-                {/* ПЛАВАЮЧИЙ БАНЕР UNDO (Внизу модального вікна з плавною анімацією) */}
+                {/* ПЛАВАЮЧИЙ БАНЕР UNDO */}
                 <AnimatePresence>
                     {pendingDelete && (
                         <motion.div
@@ -286,6 +425,7 @@ export const AdminModal = ({ isOpen, onClose, movies = [], onRefresh }) => {
                                 </span>
                             </div>
                             <button
+                                type="button"
                                 onClick={handleUndo}
                                 className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all active:scale-95 shadow-md shadow-blue-500/20"
                             >
@@ -294,7 +434,6 @@ export const AdminModal = ({ isOpen, onClose, movies = [], onRefresh }) => {
                         </motion.div>
                     )}
                 </AnimatePresence>
-
             </motion.div>
         </div>
     );
