@@ -2,7 +2,7 @@ const { PrismaClient } = require('@prisma/client');
 const PDFDocument = require('pdfkit');
 const QRCode = require('qrcode');
 const path = require('path');
-const fs = require('fs'); // Додано модуль для перевірки файлів шрифтів
+const fs = require('fs');
 
 const prisma = new PrismaClient();
 
@@ -150,12 +150,14 @@ const bookingController = {
 
     /**
      * ### НАУКОВО-ПРИКЛАДНИЙ МОДУЛЬ: Динамічна генерація звітних документів.
-     * Формування електронних квитків PDF з виправленим відображенням валюти та покращеним дизайном.
+     * Формування електронних квитків PDF з виправленим відображенням валюти, покращеним дизайном та локалізацією.
      */
     downloadTicketPdf: async (req, res) => {
         try {
             const { bookingId } = req.params;
             const bId = parseInt(bookingId);
+
+            const lang = req.query.lang || 'uk';
 
             const booking = await prisma.booking.findUnique({
                 where: { id: bId },
@@ -177,6 +179,37 @@ const bookingController = {
                 return res.status(403).json({ error: 'Доступ заборонено' });
             }
 
+            const dict = {
+                uk: {
+                    header: 'КІНОАФІША ПЛЮС',
+                    subtitle: 'Електронний квиток на сеанс',
+                    cinema: 'Кінотеатр: ',
+                    hall: 'Зал: ',
+                    time: 'Час: ',
+                    seat: 'Місце',
+                    row: 'Ряд',
+                    chair: 'Крісло',
+                    currency: 'грн',
+                    total: 'Всього сплачено: ',
+                    qrInfo: 'Контроль на вході за QR-кодом'
+                },
+                en: {
+                    header: 'CINEMA APP PLUS',
+                    subtitle: 'Electronic Movie Ticket',
+                    cinema: 'Cinema: ',
+                    hall: 'Hall: ',
+                    time: 'Time: ',
+                    seat: 'Ticket',
+                    row: 'Row',
+                    chair: 'Seat',
+                    currency: 'UAH',
+                    total: 'Total paid: ',
+                    qrInfo: 'Entrance control via QR code'
+                }
+            };
+            const translation = dict[lang] || dict['uk'];
+            const locale = lang === 'uk' ? 'uk-UA' : 'en-US';
+
             const verificationUrl = `https://cinema-diploma.vercel.app/tickets/verify/${booking.id}`;
             const qrCodeDataUrl = await QRCode.toDataURL(verificationUrl, { margin: 1, width: 150 });
 
@@ -191,10 +224,10 @@ const bookingController = {
 
             const useBold = fs.existsSync(fontBoldPath) ? fontBoldPath : fontPath;
 
-            doc.font(useBold).fillColor('#1E293B').fontSize(16).text('КІНОАФІША ПЛЮС', { align: 'center' });
+            doc.font(useBold).fillColor('#1E293B').fontSize(16).text(translation.header, { align: 'center' });
             doc.moveDown(0.15);
 
-            doc.font(fontPath).fillColor('#64748B').fontSize(7.5).text('Електронний квиток на сеанс', { align: 'center', tracking: 0.5 });
+            doc.font(fontPath).fillColor('#64748B').fontSize(7.5).text(translation.subtitle, { align: 'center', tracking: 0.5 });
             doc.moveDown(0.4);
 
             doc.strokeColor('#CBD5E1').lineWidth(0.75).moveTo(15, doc.y).lineTo(doc.page.width - 15, doc.y).stroke();
@@ -204,27 +237,27 @@ const bookingController = {
             doc.moveDown(0.5);
 
             doc.font(fontPath).fillColor('#334155').fontSize(9);
-            doc.text(`Кінотеатр:  ${booking.showtime.hall.theater.name}`, { lineGap: 2 });
-            doc.text(`Зал:  ${booking.showtime.hall.name}`, { lineGap: 2 });
+            doc.text(`${translation.cinema} ${booking.showtime.hall.theater.name}`, { lineGap: 2 });
+            doc.text(`${translation.hall} ${booking.showtime.hall.name}`, { lineGap: 2 });
 
-            const sessionDate = new Date(booking.showtime.startTime).toLocaleDateString('uk-UA', {
+            const sessionDate = new Date(booking.showtime.startTime).toLocaleDateString(locale, {
                 day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit'
             });
-            doc.text(`Час:  ${sessionDate}`, { lineGap: 2 });
+            doc.text(`${translation.time} ${sessionDate}`, { lineGap: 2 });
 
             doc.moveDown(0.4);
             doc.strokeColor('#E2E8F0').lineWidth(0.5).moveTo(15, doc.y).lineTo(doc.page.width - 15, doc.y).stroke();
             doc.moveDown(0.5);
 
             doc.font(fontPath).fillColor('#334155').fontSize(8.5);
-            booking.tickets.forEach((t, i) => {
-                doc.text(`Місце ${i + 1}: Ряд ${t.seat.rowNum}, Крісло ${t.seat.seatNum} (${t.price} грн)`, { lineGap: 2 });
+            booking.tickets.forEach((tick, i) => {
+                doc.text(`${translation.seat} ${i + 1}: ${translation.row} ${tick.seat.rowNum}, ${translation.chair} ${tick.seat.seatNum} (${tick.price} ${translation.currency})`, { lineGap: 2 });
             });
 
             doc.moveDown(0.6);
 
-            const total = booking.tickets.reduce((sum, t) => sum + t.price, 0);
-            doc.font(useBold).fillColor('#047857').fontSize(11).text(`Всього сплачено: ${total} грн`, { align: 'center' });
+            const total = booking.tickets.reduce((sum, tick) => sum + tick.price, 0);
+            doc.font(useBold).fillColor('#047857').fontSize(11).text(`${translation.total} ${total} ${translation.currency}`, { align: 'center' });
             doc.moveDown(0.5);
 
             const qrWidth = 90;
@@ -234,7 +267,7 @@ const bookingController = {
             doc.font(fontPath)
                 .fillColor('#94A3B8')
                 .fontSize(7)
-                .text(`ID: ${booking.id} • Контроль на вході за QR-кодом`, 15, doc.page.height - 25, {
+                .text(`ID: ${booking.id} • ${translation.qrInfo}`, 15, doc.page.height - 25, {
                     align: 'center',
                     width: doc.page.width - 30
                 });

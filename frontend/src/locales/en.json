@@ -227,5 +227,19 @@
     "500_message": "Our service is currently experiencing technical issues. Our team has been notified. Please try refreshing the page in a few minutes.",
     "network_title": "Connection lost",
     "network_message": "It seems you are offline. Please check your internet connection and Wi-Fi settings, then try again."
+  },
+
+  "pdf_ticket": {
+    "header": "CINEMA APP PLUS",
+    "subtitle": "Electronic Movie Ticket",
+    "cinema": "Cinema: ",
+    "hall": "Hall: ",
+    "time": "Time: ",
+    "seat": "Ticket",
+    "row": "Row",
+    "chair": "Seat",
+    "currency": "UAH",
+    "total": "Total paid: ",
+    "qr_info": "Entrance control via QR code"
   }
 }
