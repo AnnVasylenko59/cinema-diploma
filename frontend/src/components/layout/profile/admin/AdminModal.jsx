@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import axios from "axios";
 
 /**
- * КОМПОНЕНТ: Модальне вікно панелі адміністратора з двоlevel-акордеон групуванням (Фільм -> Дата -> Сеанс).
+ * КОМПОНЕНТ: Модальне вікно панелі адміністратора з пошуком та подвійним Undo розкладу.
  * @param {Object} props - Пропси компонента.
  * @param {boolean} props.isOpen - Статус видимості.
  * @param {Function} props.onClose - Закриття вікна.
@@ -19,6 +19,10 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
     const [activeTab, setActiveTab] = useState("movies");
     const [isDeleting, setIsDeleting] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+
+    // Пошукові запити
+    const [movieSearch, setMovieSearch] = useState("");
+    const [showtimeSearch, setShowtimeSearch] = useState("");
 
     // Стейти для фільмів
     const [editingMovie, setEditingMovie] = useState(null);
@@ -41,18 +45,43 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
     const [expandedMovies, setExpandedMovies] = useState({});
     const [expandedDates, setExpandedDates] = useState({});
 
-    // Стейти для Undo
+    // Рефи та стейти для Undo (Фільми)
     const [pendingDelete, setPendingDelete] = useState(null);
     const [timeLeft, setTimeLeft] = useState(15);
-
     const deleteTimerRef = useRef(null);
     const countdownIntervalRef = useRef(null);
 
-    // ГЛИБОКЕ ДВОХРІВНЕВЕ ГРУПУВАННЯ: Фільм -> Дата -> Сеанси
+    // Рефи та стейти для Undo (Сеанси)
+    const [pendingDeleteShowtime, setPendingDeleteShowtime] = useState(null);
+    const [showtimeTimeLeft, setShowtimeTimeLeft] = useState(15);
+    const showtimeDeleteTimerRef = useRef(null);
+    const showtimeCountdownIntervalRef = useRef(null);
+
+    // Фільтрація та мемоїзація списку фільмів із пошуком
+    const displayedMovies = useMemo(() => {
+        return movies
+            .filter(m => m.id !== pendingDelete?.id)
+            .filter(m => {
+                if (!movieSearch) return true;
+                const query = movieSearch.toLowerCase();
+                return m.title?.toLowerCase().includes(query) || m.director?.toLowerCase().includes(query);
+            });
+    }, [movies, pendingDelete, movieSearch]);
+
+    // ГЛИБОКЕ ДВОХРІВНЕВЕ ГРУПУВАННЯ СЕАНСІВ + ПОШУК
     const bundledShowtimes = useMemo(() => {
         const movieMap = {};
 
-        showtimes.forEach((st) => {
+        const filteredShowtimes = showtimes.filter(st => {
+            if (pendingDeleteShowtime && st.id === pendingDeleteShowtime.id) return false;
+            if (!showtimeSearch) return true;
+            const query = showtimeSearch.toLowerCase();
+            const titleMatch = st.movie?.title?.toLowerCase().includes(query);
+            const theaterMatch = st.hall?.theater?.name?.toLowerCase().includes(query);
+            return titleMatch || theaterMatch;
+        });
+
+        filteredShowtimes.forEach((st) => {
             const movieId = st.movieId || st.movie?.id || "unknown";
             const movieTitle = st.movie?.title || t("admin.movies.unknown", "Невідомий фільм");
             const posterUrl = st.movie?.posterUrl || "";
@@ -88,7 +117,7 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
             });
             return { ...movie, dates: sortedDates };
         });
-    }, [showtimes, t]);
+    }, [showtimes, pendingDeleteShowtime, showtimeSearch, t]);
 
     const loadShowtimesData = async () => {
         try {
@@ -99,7 +128,7 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
             setShowtimes(stRes.data || []);
             setTheaters(thRes.data.theaters || thRes.data || []);
         } catch (err) {
-            console.error("Failed to load showtimes context data:", err);
+            console.error(err);
         }
     };
 
@@ -117,6 +146,7 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
         setSelectedGenres([]);
     };
 
+    // Фінальне видалення фільму
     const executeRealDelete = async (movieId) => {
         setIsDeleting(true);
         try {
@@ -126,8 +156,8 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
             });
             onRefresh?.();
         } catch (error) {
-            console.error("Delete error:", error);
-            alert(error.response?.data?.error || "Помилка при остаточному видаленні фільму");
+            console.error(error);
+            alert("Помилка при видаленні фільму");
         } finally {
             setIsDeleting(false);
             setPendingDelete(null);
@@ -155,6 +185,45 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
         clearTimeout(deleteTimerRef.current);
         clearInterval(countdownIntervalRef.current);
         setPendingDelete(null);
+    };
+
+    // Фінальне видалення сеансу
+    const executeRealDeleteShowtime = async (showtimeId) => {
+        try {
+            const token = localStorage.getItem('authToken');
+            await axios.delete(`http://localhost:5000/api/showtimes/${showtimeId}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            loadShowtimesData();
+        } catch (error) {
+            console.error(error);
+            alert("Помилка при видаленні сеансу");
+        } finally {
+            setPendingDeleteShowtime(null);
+        }
+    };
+
+    const handleActionDeleteShowtime = (st) => {
+        if (pendingDeleteShowtime) {
+            clearTimeout(showtimeDeleteTimerRef.current);
+            clearInterval(showtimeCountdownIntervalRef.current);
+            executeRealDeleteShowtime(pendingDeleteShowtime.id);
+        }
+        setPendingDeleteShowtime(st);
+        setShowtimeTimeLeft(15);
+        showtimeCountdownIntervalRef.current = setInterval(() => {
+            setShowtimeTimeLeft((prev) => (prev <= 1 ? (clearInterval(showtimeCountdownIntervalRef.current), 0) : prev - 1));
+        }, 1000);
+        showtimeDeleteTimerRef.current = setTimeout(() => {
+            clearInterval(showtimeCountdownIntervalRef.current);
+            executeRealDeleteShowtime(st.id);
+        }, 15000);
+    };
+
+    const handleUndoShowtime = () => {
+        clearTimeout(showtimeDeleteTimerRef.current);
+        clearInterval(showtimeCountdownIntervalRef.current);
+        setPendingDeleteShowtime(null);
     };
 
     const handleStartEdit = (movie) => {
@@ -204,7 +273,8 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
             resetForm();
             onRefresh?.();
         } catch (error) {
-            alert(error.response?.data?.error || "Помилка збереження даних фільму");
+            console.error(error);
+            alert("Помилка збереження даних фільму");
         } finally {
             setIsSaving(false);
         }
@@ -222,28 +292,14 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
                 price: showtimeData.price
             }, { headers: { Authorization: `Bearer ${token}` } });
 
-            alert(t("admin.showtimes.success", "Сеанс успішно додано до розкладу!"));
             setIsAddingShowtime(false);
             setShowtimeData({ movieId: "", theaterId: "", hallId: "", startTime: "", price: "120" });
             loadShowtimesData();
         } catch (err) {
-            alert(err.response?.data?.error || "Помилка при створенні сеансу");
+            console.error(err);
+            alert("Помилка при створенні сеансу");
         } finally {
             setIsSaving(false);
-        }
-    };
-
-    const handleDeleteShowtime = async (id) => {
-        if (!window.confirm(t("admin.showtimes.confirm_delete", "Ви впевнені, що хочете видалити цей сеанс? Усі броні зникнуть!"))) return;
-        try {
-            const token = localStorage.getItem('authToken');
-            await axios.delete(`http://localhost:5000/api/showtimes/${id}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            loadShowtimesData();
-        } catch (err) {
-            console.error(err);
-            alert("Помилка при видаленні сеансу");
         }
     };
 
@@ -251,7 +307,6 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
         setExpandedMovies(prev => ({ ...prev, [movieId]: !prev[movieId] }));
     };
 
-    // Перемикання згортання конкретної дати для конкретного фільму
     const toggleDateExpand = (movieId, dateKey) => {
         const key = `${movieId}-${dateKey}`;
         setExpandedDates(prev => ({ ...prev, [key]: !prev[key] }));
@@ -263,6 +318,11 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
             clearInterval(countdownIntervalRef.current);
             executeRealDelete(pendingDelete.id);
         }
+        if (pendingDeleteShowtime) {
+            clearTimeout(showtimeDeleteTimerRef.current);
+            clearInterval(showtimeCountdownIntervalRef.current);
+            executeRealDeleteShowtime(pendingDeleteShowtime.id);
+        }
         onClose();
     };
 
@@ -270,14 +330,14 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
         return () => {
             clearTimeout(deleteTimerRef.current);
             clearInterval(countdownIntervalRef.current);
+            clearTimeout(showtimeDeleteTimerRef.current);
+            clearInterval(showtimeCountdownIntervalRef.current);
         };
     }, []);
 
     if (!isOpen) return null;
 
-    const displayedMovies = movies.filter(m => m.id !== pendingDelete?.id);
     const showForm = isAdding || !!editingMovie;
-
     const selectedTheaterObj = theaters.find(t => t.id === parseInt(showtimeData.theaterId, 10));
     const availableHalls = selectedTheaterObj ? selectedTheaterObj.halls : [];
 
@@ -362,10 +422,19 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
                             </form>
                         ) : (
                             <div className="space-y-6">
-                                <div className="flex justify-between bg-white p-4 rounded-2xl border border-gray-100 shadow-sm items-center">
+                                {/* РЯДОК ПОШУКУ ФІЛЬМІВ */}
+                                <div className="flex flex-col sm:flex-row gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm items-center justify-between">
                                     <span className="text-sm font-bold text-gray-500">Усього фільмів: {displayedMovies.length}</span>
-                                    <button onClick={() => { setIsAdding(true); resetForm(); }} className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2 rounded-xl text-xs font-bold shadow-md"><Plus size={14} /> Додати фільм</button>
+                                    <input
+                                        type="text"
+                                        placeholder="Пошук фільму за назвою чи режисером..."
+                                        value={movieSearch}
+                                        onChange={(e) => setMovieSearch(e.target.value)}
+                                        className="px-4 py-2 text-xs rounded-xl border border-gray-200 focus:outline-none focus:border-blue-500 font-medium text-gray-900 w-full sm:max-w-xs"
+                                    />
+                                    <button onClick={() => { setIsAdding(true); resetForm(); }} className="flex items-center gap-2 bg-blue-600 text-white px-5 py-2 rounded-xl text-xs font-bold shadow-md shrink-0"><Plus size={14} /> Додати фільм</button>
                                 </div>
+
                                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                                     <table className="w-full text-left border-collapse">
                                         <thead>
@@ -395,7 +464,7 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
                         )
                     )}
 
-                    {/* ТАБ 2: ДВОХРІВНЕВИЙ СУПЕР-КОМПАКТНИЙ АКОРДЕОН (ФІЛЬМ -> ДАТА -> СЕАНСИ) */}
+                    {/* ТАБ 2: АКОРДЕОН РОЗКЛАДУ */}
                     {activeTab === "showtimes" && (
                         isAddingShowtime ? (
                             <form onSubmit={handleCreateShowtime} className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm space-y-6 max-w-xl mx-auto">
@@ -442,13 +511,21 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
                             </form>
                         ) : (
                             <div className="space-y-4">
-                                <div className="flex justify-between bg-white p-4 rounded-2xl border border-gray-100 shadow-sm items-center">
+                                {/* РЯДОК ПОШУКУ РОЗКЛАДУ */}
+                                <div className="flex flex-col sm:flex-row gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm items-center justify-between">
                                     <span className="text-sm font-bold text-gray-500">Афіша розкладу: {bundledShowtimes.length} фільм(ів)</span>
-                                    <button onClick={() => setIsAddingShowtime(true)} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md"><Plus size={14} /> Додати сеанс</button>
+                                    <input
+                                        type="text"
+                                        placeholder="Пошук за назвою фільму чи кінотеатру..."
+                                        value={showtimeSearch}
+                                        onChange={(e) => setShowtimeSearch(e.target.value)}
+                                        className="px-4 py-2 text-xs rounded-xl border border-gray-200 focus:outline-none focus:border-blue-500 font-medium text-gray-900 w-full sm:max-w-xs"
+                                    />
+                                    <button onClick={() => setIsAddingShowtime(true)} className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md shrink-0"><Plus size={14} /> Додати сеанс</button>
                                 </div>
 
                                 {bundledShowtimes.length === 0 ? (
-                                    <div className="p-12 text-center text-gray-400 font-medium bg-white rounded-2xl border border-gray-100">Розклад порожній.</div>
+                                    <div className="p-12 text-center text-gray-400 font-medium bg-white rounded-2xl border border-gray-100">Нічого не знайдено.</div>
                                 ) : (
                                     <div className="space-y-3">
                                         {bundledShowtimes.map((movieGroup) => {
@@ -456,7 +533,7 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
                                             return (
                                                 <div key={movieGroup.movieId} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden transition-all">
 
-                                                    {/* ЛЕВЕЛ 1: ХЕДЕР ФІЛЬМУ */}
+                                                    {/* ЛЕВЕЛ 1: ФІЛЬМ */}
                                                     <div
                                                         onClick={() => toggleMovieExpand(movieGroup.movieId)}
                                                         className="p-4 flex items-center justify-between cursor-pointer hover:bg-gray-50/70 select-none transition-colors"
@@ -475,7 +552,7 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
                                                         </div>
                                                     </div>
 
-                                                    {/* ВМІСТ ФІЛЬМУ (СПИСОК ДАТ) */}
+                                                    {/* ВМІСТ (СПИСОК ДАТ) */}
                                                     <AnimatePresence initial={false}>
                                                         {isMovieExpanded && (
                                                             <motion.div
@@ -486,14 +563,13 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
                                                                 className="bg-gray-50/30 border-t border-gray-50 px-4 pb-4 pt-1 space-y-3"
                                                             >
                                                                 {movieGroup.dates.map((dateGroup) => {
-                                                                    // Унікальний ключ для акордеону другого рівня
                                                                     const dateKeyCombined = `${movieGroup.movieId}-${dateGroup.dateKey}`;
                                                                     const isDateExpanded = !!expandedDates[dateKeyCombined];
 
                                                                     return (
                                                                         <div key={dateGroup.dateKey} className="space-y-1.5 mt-2">
 
-                                                                            {/* ЛЕВЕЛ 2: КЛІКАБЕЛЬНИЙ ХЕДЕР ДНЯ */}
+                                                                            {/* ЛЕВЕЛ 2: ДЕНЬ */}
                                                                             <div
                                                                                 onClick={() => toggleDateExpand(movieGroup.movieId, dateGroup.dateKey)}
                                                                                 className="text-[10px] font-black uppercase text-gray-400 hover:text-gray-700 tracking-widest pl-2 py-1.5 flex items-center justify-between cursor-pointer select-none bg-gray-100/50 rounded-lg transition-colors"
@@ -504,7 +580,7 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
                                                                                 </div>
                                                                             </div>
 
-                                                                            {/* ЛЕВЕЛ 3: СПИСОК СЕАНСІВ (ЗВЕРТАЄТЬСЯ) */}
+                                                                            {/* ЛЕВЕЛ 3: СЕАНСИ */}
                                                                             <AnimatePresence initial={false}>
                                                                                 {isDateExpanded && (
                                                                                     <motion.div
@@ -529,7 +605,7 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
                                                                                                     <span className="text-gray-900 font-black">{st.price || 120} ₴</span>
                                                                                                     <button
                                                                                                         type="button"
-                                                                                                        onClick={() => handleDeleteShowtime(st.id)}
+                                                                                                        onClick={() => handleActionDeleteShowtime(st)}
                                                                                                         className="p-1 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-all active:scale-90"
                                                                                                         title="Видалити сеанс"
                                                                                                     >
@@ -563,7 +639,7 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                                 <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
                                     <div className="p-3 bg-green-50 text-green-600 rounded-xl"><DollarSign size={24} /></div>
-                                    <div><div className="text-xs font-bold text-gray-400 uppercase">Касові збори</div><div className="text-xl font-black text-gray-900 mt-0.5">45,200 ₴</div></div>
+                                    <div><div className="text-xs font-bold text-gray-400 uppercase">Касові збору</div><div className="text-xl font-black text-gray-900 mt-0.5">45,200 ₴</div></div>
                                 </div>
                                 <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
                                     <div className="p-3 bg-blue-50 text-blue-600 rounded-xl"><Ticket size={24} /></div>
@@ -582,15 +658,27 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
                     )}
                 </div>
 
-                {/* ПЛАВАЮЧИЙ БАНЕР UNDO */}
-                <AnimatePresence>
-                    {pendingDelete && (
-                        <motion.div initial={{ opacity: 0, y: 50, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 50, scale: 0.9 }} className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-6 py-4 rounded-2xl shadow-xl flex items-center gap-6 border border-gray-800 z-50 min-w-[400px] justify-between">
-                            <div className="flex items-center gap-3"><div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" /><span className="text-sm font-medium">Видалено фільм <b className="text-blue-400 font-black">«{pendingDelete.title}»</b> ({timeLeft}с)</span></div>
-                            <button type="button" onClick={handleUndo} className="flex items-center gap-1.5 bg-blue-600 text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all"><Undo2 size={14} /> Відновити</button>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                {/* ПЛАВАЮЧІ БАНЕРИ СКАСУВАННЯ ВИДАЛЕННЯ (UNDO) */}
+                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-3 min-w-[420px]">
+                    <AnimatePresence>
+                        {pendingDelete && (
+                            <motion.div initial={{ opacity: 0, y: 20, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20, scale: 0.9 }} className="bg-gray-900 text-white px-6 py-4 rounded-2xl shadow-xl flex items-center gap-6 border border-gray-800 justify-between">
+                                <div className="flex items-center gap-3"><div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" /><span className="text-sm font-medium">Видалено фільм <b className="text-blue-400 font-black">«{pendingDelete.title}»</b> ({timeLeft}с)</span></div>
+                                <button type="button" onClick={handleUndo} className="flex items-center gap-1.5 bg-blue-600 text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all"><Undo2 size={14} /> Відновити</button>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    <AnimatePresence>
+                        {pendingDeleteShowtime && (
+                            <motion.div initial={{ opacity: 0, y: 20, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 20, scale: 0.9 }} className="bg-gray-900 text-white px-6 py-4 rounded-2xl shadow-xl flex items-center gap-6 border border-gray-800 justify-between">
+                                <div className="flex items-center gap-3"><div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" /><span className="text-sm font-medium">Видалено сеанс фільму <b className="text-blue-400 font-black">«{pendingDeleteShowtime.movie?.title}»</b> ({showtimeTimeLeft}с)</span></div>
+                                <button type="button" onClick={handleUndoShowtime} className="flex items-center gap-1.5 bg-blue-600 text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all"><Undo2 size={14} /> Відновити</button>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
+
             </motion.div>
         </div>
     );
