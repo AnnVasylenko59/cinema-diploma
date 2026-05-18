@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { LogOut, ChevronRight } from "lucide-react";
+import { LogOut, ChevronRight, LayoutDashboard } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { styles, getMenuItems } from "./ProfileStyles";
@@ -9,7 +9,21 @@ export const ProfileMenu = ({ user, onLogout, onMenuSelect }) => {
     const { t } = useTranslation();
     const [open, setOpen] = useState(false);
     const ref = useRef();
-    const menuItems = getMenuItems(t);
+
+    // Отримуємо базові елементи меню (історія, налаштування тощо)
+    const baseMenuItems = getMenuItems(t);
+
+    // Якщо користувач адмін — додаємо пункт "Панель адміна" в кінець списку
+    const menuItems = user?.isAdmin
+        ? [
+            ...baseMenuItems,
+            {
+                key: "admin",
+                label: t("profile_menu.admin", "Панель адміна"),
+                icon: LayoutDashboard,
+            },
+        ]
+        : baseMenuItems;
 
     useEffect(() => {
         if (!open) return;

@@ -3,12 +3,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import axios from "axios";
 
-// Складові інтерфейсу (додаємо ../ щоб вийти з core до src)
+// Складові інтерфейсу
 import { Header } from "../components/layout/header/Header.jsx";
 import { Footer } from "../components/layout/footer/Footer.jsx";
 import { LoginModal } from "../components/layout/auth/LoginModal.jsx";
 import { RegisterModal } from "../components/layout/auth/RegisterModal.jsx";
 import { MovieModal } from "../components/movies/modal/MovieModal.jsx";
+import { AdminModal } from "../components/layout/profile/admin/AdminModal.jsx";
 
 // Сторінки
 import { HomePage } from "../components/pages/home/HomePage.jsx";
@@ -130,14 +131,9 @@ export default function App() {
             );
 
             if (res.data.success) {
-                // Зберігаємо bookingId в стані
                 const newBookingId = res.data.bookingId;
                 setBookingId(newBookingId);
-
-                // Переходимо на сторінку підтвердження
                 setStep("confirmation");
-
-                // Повертаємо bookingId для ланцюжка викликів
                 return { success: true, bookingId: newBookingId };
             }
 
@@ -286,11 +282,21 @@ export default function App() {
                 onToggleWatchlist={handleToggleWatchlist}
             />
 
-            {/* Профільні модалки */}
+            {/* Профільні модалки та Панель адміністратора */}
             {profileModal === "settings" && <ProfileSettingsModal open onClose={() => setProfileModal(null)} user={user} onSave={updateUser} onGoHome={handleGoHome} />}
             {profileModal === "favorites" && <FavoritesModal open onClose={() => setProfileModal(null)} user={user} watchlistIds={watchlistIds} onToggleWatchlist={handleToggleWatchlist} onOpenMovie={(m) => handleOpenMovieFromProfile(m, "favorites")} onGoHome={handleGoHome} />}
             {profileModal === "history" && <BookingsHistoryModal open onClose={() => setProfileModal(null)} user={user} onOpenMovie={(m) => handleOpenMovieFromProfile(m, "history")} onGoHome={handleGoHome} />}
             {profileModal === "ratings" && <RatingsModal open onClose={() => setProfileModal(null)} user={user} onOpenMovie={(m) => handleOpenMovieFromProfile(m, "ratings")} onGoHome={handleGoHome} />}
+
+            {/* Рендеринг нашої нової адмін-панелі */}
+            {profileModal === "admin" && (
+                <AdminModal
+                    isOpen
+                    onClose={() => setProfileModal(null)}
+                    movies={movies}
+                    onRefresh={loadInitialData}
+                />
+            )}
 
             <Footer />
         </div>

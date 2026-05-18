@@ -131,6 +131,21 @@ const authenticateToken = (req, res, next) => {
     });
 };
 
+/**
+ * МЕХАНІЗМ КОНТРОЛЮ ДОСТУПУ (RBAC): Перевірка прав адміністратора.
+ * @param {Object} req - Об'єкт запиту Express.
+ * @param {Object} res - Об'єкт відповіді Express.
+ * @param {Function} next - Функція передачі керування наступному обробнику.
+ * @returns {void}
+ */
+const isAdmin = (req, res, next) => {
+    if (!req.user || !req.user.isAdmin) {
+        logger.warn(`Admin access denied for user: ${req.user ? req.user.login : 'Guest'}`);
+        return res.status(403).json({ error: 'Доступ відхилено. Потрібні права адміністратора.' });
+    }
+    next();
+};
+
 // --- 5. РОУТИ КОРИСТУВАЧІВ (AUTH & PROFILE) ---
 
 app.get('/api/users/check', async (req, res) => {
@@ -337,7 +352,174 @@ app.get('/api/movies', cacheMiddleware(300), async (req, res) => {
         });
         res.json({ movies });
     } catch (error) {
-        logger.error(`Error fetching movies: ${error.message}`); 
+        logger.error(`Error fetching movies: ${error.message}`);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * АДМІН-ФУНКЦІЯ: Повне каскадне видалення фільму та всіх пов'язаних сеансів, квитків і броней.
+ */
+app.delete('/api/movies/:id', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const movieId = parseInt(id);
+
+        // 1. Перевіряємо чи взагалі існує такий фільм
+        const movieExists = await prisma.movie.findUnique({ where: { id: movieId } });
+        if (!movieExists) {
+            return res.status(404).json({ error: 'Фільм не знайдено в базі даних.' });
+        }
+
+        // 2. Видаляємо фільм зі списків бажаного користувачів (Watchlist)
+        await prisma.watchlistItem.deleteMany({ where: { movieId } });
+
+        // 3. Знаходимо всі сеанси (Showtimes), які були створені для цього фільму
+        const showtimes = await prisma.showtime.findMany({ where: { movieId } });
+        const showtimeIds = showtimes.map(s => s.id);
+
+        if (showtimeIds.length > 0) {
+            // 4. Знаходимо всі бронювання на ці сеанси
+            const bookings = await prisma.booking.findMany({
+                where: { showtimeId: { in: showtimeIds } }
+            });
+            const bookingIds = bookings.map(b => b.id);
+
+            if (bookingIds.length > 0) {
+                // 5. Спочатку видаляємо квитки, оскільки вони залежать від бронювань
+                await prisma.ticket.deleteMany({
+                    where: { bookingId: { in: bookingIds } }
+                });
+                // 6. Видаляємо самі бронювання
+                await prisma.booking.deleteMany({
+                    where: { showtimeId: { in: showtimeIds } }
+                });
+            }
+
+            // 7. Видаляємо сеанси фільму
+            await prisma.showtime.deleteMany({ where: { movieId } });
+        }
+
+        // 8. Коли база даних повністю очищена від зв'язків, видаляємо сам фільм
+        // Зв'язки в MovieGenre видаляться автоматично завдяки onDelete: Cascade у схемі Prisma
+        await prisma.movie.delete({
+            where: { id: movieId }
+        });
+
+        // 9. Очищаємо кеш сервера, щоб зміни миттєво з'явилися на головній сторінці
+        apiCache.clear();
+
+        logger.info(`Movie with ID ${movieId} and all its relations successfully deleted by admin: ${req.user.login}`);
+        res.json({ success: true, message: 'Фільм та всі пов’язані сеанси/квитки успішно видалено з системи.' });
+    } catch (error) {
+        logger.error(`Error executing cascade delete for movie ID ${req.params.id}: ${error.message}`);
+        res.status(500).json({ error: 'Не вдалося видалити фільм через помилку очищення зв’язків бази даних.' });
+    }
+});
+
+/**
+ * АДМІН-ФУНКЦІЯ: Створення нового фільму та автоматичне пов'язування з жанрами.
+ */
+app.post('/api/movies', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const {
+            title, year, durationMin, backdropUrl,
+            posterUrl, trailerUrl, description, rating, director, genres
+        } = req.body;
+
+        if (!title || !year || !durationMin || !description) {
+            return res.status(400).json({ error: 'Обов’язкові поля (title, year, durationMin, description) відсутні.' });
+        }
+
+        const genreConnections = genres && Array.isArray(genres)
+            ? genres.map(genreName => ({
+                genre: {
+                    connectOrCreate: {
+                        where: { name: genreName },
+                        create: { name: genreName }
+                    }
+                }
+            }))
+            : [];
+
+        const newMovie = await prisma.movie.create({
+            data: {
+                title,
+                year: parseInt(year),
+                durationMin: parseInt(durationMin),
+                backdropUrl,
+                posterUrl,
+                trailerUrl,
+                description,
+                rating: rating ? parseFloat(rating) : null,
+                director,
+                genres: { create: genreConnections }
+            },
+            include: { genres: { include: { genre: true } } }
+        });
+
+        apiCache.clear();
+        logger.info(`New movie "${title}" created by admin: ${req.user.login}`);
+        res.status(201).json(newMovie);
+    } catch (error) {
+        logger.error(`Error creating movie: ${error.message}`);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * АДМІН-ФУНКЦІЯ: Повне оновлення даних фільму та перезапис його жанрів.
+ */
+app.put('/api/movies/:id', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const {
+            title, year, durationMin, backdropUrl,
+            posterUrl, trailerUrl, description, rating, director, genres
+        } = req.body;
+
+        const movieId = parseInt(id);
+
+        const movieExists = await prisma.movie.findUnique({ where: { id: movieId } });
+        if (!movieExists) return res.status(404).json({ error: 'Фільм не знайдено.' });
+
+        if (genres && Array.isArray(genres)) {
+            await prisma.movieGenre.deleteMany({ where: { movieId: movieId } });
+        }
+
+        const genreConnections = genres && Array.isArray(genres)
+            ? genres.map(genreName => ({
+                genre: {
+                    connectOrCreate: {
+                        where: { name: genreName },
+                        create: { name: genreName }
+                    }
+                }
+            }))
+            : undefined;
+
+        const updatedMovie = await prisma.movie.update({
+            where: { id: movieId },
+            data: {
+                title,
+                year: year ? parseInt(year) : undefined,
+                durationMin: durationMin ? parseInt(durationMin) : undefined,
+                backdropUrl,
+                posterUrl,
+                trailerUrl,
+                description,
+                rating: rating ? parseFloat(rating) : undefined,
+                director,
+                genres: genreConnections ? { create: genreConnections } : undefined
+            },
+            include: { genres: { include: { genre: true } } }
+        });
+
+        apiCache.clear();
+        logger.info(`Movie ID ${movieId} updated by admin: ${req.user.login}`);
+        res.json(updatedMovie);
+    } catch (error) {
+        logger.error(`Error updating movie ID ${req.params.id}: ${error.message}`);
         res.status(500).json({ error: error.message });
     }
 });
@@ -349,7 +531,7 @@ app.get('/api/genres', cacheMiddleware(300), async (req, res) => {
         });
         res.json(genres);
     } catch (error) {
-        logger.error(`Error fetching genres: ${error.message}`); 
+        logger.error(`Error fetching genres: ${error.message}`);
         res.status(500).json({ error: error.message });
     }
 });
@@ -363,7 +545,7 @@ app.get('/api/movies/:id/recommended', cacheMiddleware(300), async (req, res) =>
         });
 
         if (!currentMovie) {
-            logger. warning(`Recommended movies requested for unknown movie ID: ${id}`); 
+            logger.warning(`Recommended movies requested for unknown movie ID: ${id}`);
             return res.status(404).json({ error: 'Movie not found' });
         }
 
@@ -379,7 +561,7 @@ app.get('/api/movies/:id/recommended', cacheMiddleware(300), async (req, res) =>
         });
         res.json(recommended);
     } catch (error) {
-        logger.error(`Error fetching recommended movies for ID ${req.params.id}: ${error.message}`); 
+        logger.error(`Error fetching recommended movies for ID ${req.params.id}: ${error.message}`);
         res.status(500).json({ error: error.message });
     }
 });
