@@ -89,10 +89,9 @@ export const movieAPI = {
     getById: (id) => api.get(`/movies/${id}`),
     /**
      * @async
-     * @param {number|string} id - ID фільму.
-     * @returns {Promise<Object>} Схожі фільми.
+     * @returns {Promise<Object>} Персоналізовані фільми на основі індексу Жаккара.
      */
-    getRecommended: (id) => api.get(`/movies/${id}/recommended`),
+    getRecommended: () => api.get('/movies/recommendations'),
     /**
      * @async
      * @returns {Promise<Object>} Список жанрів.

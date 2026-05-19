@@ -106,7 +106,7 @@ export const TheatersPage = ({
                     cityId: city.id
                 }),
                 theaterAPI.getAll({ cityId: city.id }),
-                movieAPI.getRecommended(propMovie.id)
+                movieAPI.getRecommended()
             ]);
 
             const now = new Date();

@@ -4,11 +4,15 @@ import {
     getMovieById,
     createMovie,
     updateMovie,
-    deleteMovie
+    deleteMovie,
+    getRecommendedMovies
 } from '../controllers/movieController.js';
 import { auth, isAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
+
+// Маршрут для персональних рекомендацій за методом Жаккара (потрібна авторизація)
+router.get('/recommendations', auth, getRecommendedMovies);
 
 // Публічні маршрути (доступні всім користувачам)
 router.get('/', getAllMovies);

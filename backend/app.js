@@ -8,6 +8,7 @@ const cors = require('cors');
 const { PrismaClient } = require('@prisma/client');
 const jwt = require('jsonwebtoken');
 const bookingController = require('./controllers/bookingController');
+const movieController = require('./controllers/movieController');
 const logger = require('./utils/logger');
 require('dotenv').config();
 
@@ -356,6 +357,8 @@ app.get('/api/movies', cacheMiddleware(300), async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
+app.get('/api/movies/recommendations', authenticateToken, movieController.getRecommendedMovies);
 
 /**
  * АДМІН-ФУНКЦІЯ: Повне каскадне видалення фільму та всіх пов'язаних сеансів, квитків і броней.
