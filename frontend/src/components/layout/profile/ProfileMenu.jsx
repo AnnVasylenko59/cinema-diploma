@@ -10,7 +10,7 @@ export const ProfileMenu = ({ user, onLogout, onMenuSelect }) => {
     const [open, setOpen] = useState(false);
     const ref = useRef();
 
-    // Отримуємо базові елементи меню (історія, налаштування тощо)
+    // Отримуємо базові елементи меню
     const baseMenuItems = getMenuItems(t);
 
     // Якщо користувач адмін — додаємо пункт "Панель адміна" в кінець списку
