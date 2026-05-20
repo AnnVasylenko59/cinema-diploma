@@ -5,11 +5,15 @@ import {
     createMovie,
     updateMovie,
     deleteMovie,
-    getRecommendedMovies
+    getRecommendedMovies,
+    getMovieStats // <-- Імпортуємо нову функцію аналітики
 } from '../controllers/movieController.js';
 import { auth, isAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
+
+// Маршрут для аналітики та статистики для адмін-панелі (ТІЛЬКИ ДЛЯ АДМІНІВ)
+router.get('/stats', auth, isAdmin, getMovieStats);
 
 // Маршрут для персональних рекомендацій за методом Жаккара (потрібна авторизація)
 router.get('/recommendations', auth, getRecommendedMovies);

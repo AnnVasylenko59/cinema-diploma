@@ -2,16 +2,100 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 /**
+ * Отримує аналітику та статистику для панелі адміністратора.
+ * Агрегує дані з таблиць квитків, сеансів та бронювань.
+ */
+const getMovieStats = async (req, res) => {
+    try {
+        // 1. Рахуємо касові збори (сума цін усіх куплених квитків)
+        const totalRevenueAgg = await prisma.ticket.aggregate({
+            _sum: { price: true }
+        });
+        const revenue = totalRevenueAgg._sum.price || 0;
+
+        // 2. Кількість проданих квитків
+        const ticketsSold = await prisma.ticket.count();
+
+        // 3. Розрахунок заповнюваності залів
+        const allShowtimes = await prisma.showtime.findMany({
+            include: {
+                hall: { select: { totalSeats: true } },
+                bookings: { include: { _count: { select: { tickets: true } } } }
+            }
+        });
+
+        let totalCapacity = 0;
+        let totalBookedSeats = 0;
+
+        allShowtimes.forEach(st => {
+            totalCapacity += st.hall?.totalSeats || 0;
+            st.bookings.forEach(b => {
+                totalBookedSeats += b._count.tickets;
+            });
+        });
+
+        const occupancyRate = totalCapacity > 0
+            ? Math.round((totalBookedSeats / totalCapacity) * 100)
+            : 0;
+
+        // 4. Топ фільмів за фінансовим виручком (сортування за сумою зароблених гривень)
+        const moviesWithTickets = await prisma.movie.findMany({
+            select: {
+                id: true,
+                title: true,
+                showtimes: {
+                    select: {
+                        bookings: {
+                            select: {
+                                tickets: {
+                                    select: {
+                                        price: true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        const topMovies = moviesWithTickets.map(movie => {
+            let movieRevenue = 0;
+            movie.showtimes.forEach(st => {
+                st.bookings.forEach(b => {
+                    b.tickets.forEach(t => {
+                        movieRevenue += t.price;
+                    });
+                });
+            });
+            return {
+                id: movie.id,
+                title: movie.title,
+                revenue: movieRevenue
+            };
+        })
+            .sort((a, b) => b.revenue - a.revenue)
+            .slice(0, 5);
+
+        // Віддаємо сформовану статистику на фронтенд
+        res.json({
+            revenue,
+            ticketsSold,
+            occupancyRate,
+            topMovies
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+/**
  * Отримує список рекомендованих фільмів для поточного користувача на основі коефіцієнта подібності Жаккара.
- * @async
- * @param {Object} req - Запит, що містить дані авторизованого користувача (req.user).
- * @param {Object} res - Відповідь з відсортованим масивом рекомендованих фільмів.
  */
 const getRecommendedMovies = async (req, res) => {
     try {
         const userId = req.user ? req.user.userId : null;
 
-        // 1. Якщо користувач не авторизований — віддаємо просто 4 останні фільми
         if (!userId) {
             const fallbackMovies = await prisma.movie.findMany({
                 take: 4,
@@ -21,7 +105,6 @@ const getRecommendedMovies = async (req, res) => {
             return res.json(fallbackMovies);
         }
 
-        // 2. Завантажуємо улюблені жанри користувача
         const user = await prisma.user.findUnique({
             where: { id: userId },
             select: { favoriteGenres: true }
@@ -29,7 +112,6 @@ const getRecommendedMovies = async (req, res) => {
 
         const userGenres = user?.favoriteGenres || [];
 
-        // Якщо користувач ще не обрав жодного улюбленого жанру — повертаємо останні додані
         if (userGenres.length === 0) {
             const defaultMovies = await prisma.movie.findMany({
                 take: 4,
@@ -39,27 +121,19 @@ const getRecommendedMovies = async (req, res) => {
             return res.json(defaultMovies);
         }
 
-        // 3. Завантажуємо всі фільми з їхніми жанрами
         const allMovies = await prisma.movie.findMany({
-            include: {
-                genres: { include: { genre: true } }
-            }
+            include: { genres: { include: { genre: true } } }
         });
 
-        // 4. Розраховуємо коефіцієнт Жаккара для кожного фільму
         const scoredMovies = allMovies.map(movie => {
             const movieGenres = movie.genres.map(g => g.genre.name);
             const intersection = userGenres.filter(g => movieGenres.includes(g));
             const union = Array.from(new Set([...userGenres, ...movieGenres]));
             const jaccardIndex = union.length > 0 ? (intersection.length / union.length) : 0;
 
-            return {
-                ...movie,
-                jaccardIndex
-            };
+            return { ...movie, jaccardIndex };
         });
 
-        // 5. Сортуємо за спаданням індексу та беремо перші 4 фільми
         const recommendations = scoredMovies
             .filter(movie => movie.jaccardIndex > 0)
             .sort((a, b) => b.jaccardIndex - a.jaccardIndex)
@@ -103,9 +177,7 @@ const getAllMovies = async (req, res) => {
         if (genres) {
             where.genres = {
                 some: {
-                    genre: {
-                        name: { in: genres.split(',') }
-                    }
+                    genre: { name: { in: genres.split(',') } }
                 }
             };
         }
@@ -156,7 +228,7 @@ const getMovieById = async (req, res) => {
  */
 const createMovie = async (req, res) => {
     try {
-        const { title, year, durationMin, backdropUrl, posterUrl, trailerUrl, description, rating, director, genres } = req.body;
+        const { title, year, durationMin, backdropUrl, posterUrl, trailerUrl, description, director, genres } = req.body;
 
         if (!title || !year || !durationMin || !description) {
             return res.status(400).json({ error: 'Обов’язкові поля відсутні.' });
@@ -182,7 +254,6 @@ const createMovie = async (req, res) => {
                 posterUrl,
                 trailerUrl,
                 description,
-                rating: rating ? parseFloat(rating) : null,
                 director,
                 genres: { create: genreConnections }
             },
@@ -201,7 +272,7 @@ const createMovie = async (req, res) => {
 const updateMovie = async (req, res) => {
     try {
         const { id } = req.params;
-        const { title, year, durationMin, backdropUrl, posterUrl, trailerUrl, description, rating, director, genres } = req.body;
+        const { title, year, durationMin, backdropUrl, posterUrl, trailerUrl, description, director, genres } = req.body;
         const movieId = parseInt(id);
 
         const movieExists = await prisma.movie.findUnique({ where: { id: movieId } });
@@ -222,7 +293,7 @@ const updateMovie = async (req, res) => {
             }))
             : undefined;
 
-        const updatedMovie = await prisma.movie.update({
+        const updatedMovie = await prisma.update({
             where: { id: movieId },
             data: {
                 title,
@@ -232,7 +303,6 @@ const updateMovie = async (req, res) => {
                 posterUrl,
                 trailerUrl,
                 description,
-                rating: rating ? parseFloat(rating) : undefined,
                 director,
                 genres: genreConnections ? { create: genreConnections } : undefined
             },
@@ -263,12 +333,12 @@ const deleteMovie = async (req, res) => {
     }
 };
 
-// Експорт у форматі CommonJS для app.js
 module.exports = {
     getRecommendedMovies,
     getAllMovies,
     getMovieById,
     createMovie,
     updateMovie,
-    deleteMovie
+    deleteMovie,
+    getMovieStats
 };

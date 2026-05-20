@@ -346,6 +346,8 @@ const cacheMiddleware = (durationSec) => (req, res, next) => {
 
 // --- 7. РОБОТА З ФІЛЬМАМИ ТА ЖАНРАМИ ---
 
+app.get('/api/movies/stats', authenticateToken, isAdmin, movieController.getMovieStats);
+
 app.get('/api/movies', cacheMiddleware(300), async (req, res) => {
     try {
         const movies = await prisma.movie.findMany({
@@ -359,6 +361,8 @@ app.get('/api/movies', cacheMiddleware(300), async (req, res) => {
 });
 
 app.get('/api/movies/recommendations', authenticateToken, movieController.getRecommendedMovies);
+
+
 
 /**
  * АДМІН-ФУНКЦІЯ: Повне каскадне видалення фільму та всіх пов'язаних сеансів, квитків і броней.
