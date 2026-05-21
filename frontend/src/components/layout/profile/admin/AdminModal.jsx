@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import axios from "axios";
 
 /**
- * КОМПОНЕНТ: Модальне вікно панелі адміністратора з живими графіками та ніжним UI.
+ * КОМПОНЕНТ: Модальне вікно панелі адміністратора у повітряному та просторому стилі сайту.
  */
 export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefresh }) => {
     const { t } = useTranslation();
@@ -17,7 +17,7 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
     const [movieSearch, setMovieSearch] = useState("");
     const [showtimeSearch, setShowtimeSearch] = useState("");
 
-    // Стейти для фільмів (рейтинг повністю видалено)
+    // Стейти для фільмів
     const [editingMovie, setEditingMovie] = useState(null);
     const [isAdding, setIsAdding] = useState(false);
     const [formData, setFormData] = useState({
@@ -30,6 +30,7 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
     const [showtimes, setShowtimes] = useState([]);
     const [theaters, setTheaters] = useState([]);
     const [isAddingShowtime, setIsAddingShowtime] = useState(false);
+    const [editingShowtime, setEditingShowtime] = useState(null);
     const [showtimeData, setShowtimeData] = useState({
         movieId: "", theaterId: "", hallId: "", startTime: "", price: "120"
     });
@@ -160,6 +161,12 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
         setSelectedGenres([]);
     };
 
+    const resetShowtimeForm = () => {
+        setShowtimeData({ movieId: "", theaterId: "", hallId: "", startTime: "", price: "120" });
+        setEditingShowtime(null);
+        setIsAddingShowtime(false);
+    };
+
     const executeRealDelete = async (movieId) => {
         setIsDeleting(true);
         try {
@@ -247,6 +254,22 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
         setSelectedGenres(movie.genres ? movie.genres.map(mg => mg.genre.name) : []);
     };
 
+    const handleStartEditShowtime = (st) => {
+        setEditingShowtime(st);
+        setIsAddingShowtime(false);
+
+        const dateObj = new Date(st.startTime);
+        const localISO = new Date(dateObj.getTime() - dateObj.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+
+        setShowtimeData({
+            movieId: st.movieId?.toString() || st.movie?.id?.toString() || "",
+            theaterId: st.hall?.theaterId?.toString() || "",
+            hallId: st.hallId?.toString() || "",
+            startTime: localISO,
+            price: st.price?.toString() || "120"
+        });
+    };
+
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
@@ -289,23 +312,33 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
         }
     };
 
-    const handleCreateShowtime = async (e) => {
+    const handleSaveShowtimeForm = async (e) => {
         e.preventDefault();
         setIsSaving(true);
         try {
             const token = localStorage.getItem('authToken');
-            await axios.post("http://localhost:5000/api/showtimes", {
-                movieId: showtimeData.movieId,
-                hallId: showtimeData.hallId,
-                startTime: showtimeData.startTime,
-                price: showtimeData.price
-            }, { headers: { Authorization: `Bearer ${token}` } });
+            const payload = {
+                movieId: parseInt(showtimeData.movieId, 10),
+                hallId: parseInt(showtimeData.hallId, 10),
+                startTime: new Date(showtimeData.startTime).toISOString(),
+                price: parseFloat(showtimeData.price)
+            };
 
-            setIsAddingShowtime(false);
-            setShowtimeData({ movieId: "", theaterId: "", hallId: "", startTime: "", price: "120" });
+            if (editingShowtime) {
+                await axios.put(`http://localhost:5000/api/showtimes/${editingShowtime.id}`, payload, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+            } else {
+                await axios.post("http://localhost:5000/api/showtimes", payload, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+            }
+
+            resetShowtimeForm();
             loadShowtimesData();
         } catch (err) {
             console.error(err);
+            alert("Помилка при збереженні сеансу");
         } finally {
             setIsSaving(false);
         }
@@ -337,125 +370,125 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
 
     if (!isOpen) return null;
 
-    const showForm = isAdding || !!editingMovie;
+    const showMovieForm = isAdding || !!editingMovie;
+    const showShowtimeForm = isAddingShowtime || !!editingShowtime;
     const selectedTheaterObj = theaters.find(t => t.id === parseInt(showtimeData.theaterId, 10));
     const availableHalls = selectedTheaterObj ? selectedTheaterObj.halls : [];
 
-    // Максимальне значення заробітку для розрахунку масштабу смуг графіка
     const maxRevenue = Math.max(...stats.topMovies.map(m => m.revenue || 1), 1);
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[6px]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/30 backdrop-blur-[8px]">
             <motion.div
-                initial={{ opacity: 0, scale: 0.98, y: 10 }}
+                initial={{ opacity: 0, scale: 0.99, y: 15 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.98, y: 10 }}
-                transition={{ duration: 0.25, ease: "easeOut" }}
-                className="bg-white rounded-[2.5rem] shadow-xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden border border-slate-100/80 relative"
+                exit={{ opacity: 0, scale: 0.99, y: 15 }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
+                className="bg-[#F8FAFC] rounded-[2.5rem] shadow-2xl w-full max-w-5xl h-[88vh] flex flex-col overflow-hidden border border-white/60 relative"
             >
                 {/* Хедер Панелі */}
-                <div className="px-10 py-6 bg-white text-slate-900 flex items-center justify-between border-b border-slate-100">
-                    <div className="flex items-center gap-3.5">
-                        <div className="p-2.5 bg-indigo-50/70 text-indigo-500 rounded-2xl"><Film size={20} /></div>
+                <div className="px-12 py-7 bg-white text-slate-900 flex items-center justify-between border-b border-slate-100/80 shadow-sm shadow-slate-100/20">
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 bg-blue-50/60 text-blue-600 rounded-2xl border border-blue-100/30"><Film size={22} /></div>
                         <div>
-                            <h2 className="text-lg font-bold tracking-tight text-slate-800">{t("admin.title", "Панель адміністратора")}</h2>
-                            <p className="text-xs text-slate-400 font-normal mt-0.5">{t("admin.subtitle", "Повний операційний контроль кіносистеми")}</p>
+                            <h2 className="text-xl font-bold tracking-tight text-slate-800">{t("admin.title", "Панель адміністратора")}</h2>
+                            <p className="text-xs text-slate-400 font-normal mt-1 tracking-wide">{t("admin.subtitle", "Повний операційний контроль кіносистеми")}</p>
                         </div>
                     </div>
-                    <button onClick={handleSafeClose} className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-50 rounded-xl transition-all"><X size={18} /></button>
+                    <button onClick={handleSafeClose} className="p-2.5 text-slate-400 hover:text-slate-700 hover:bg-slate-50 rounded-xl transition-all"><X size={18} /></button>
                 </div>
 
                 {/* Навігація */}
-                {!showForm && !isAddingShowtime && (
-                    <div className="px-10 bg-slate-50/40 border-b border-slate-100/60 flex gap-6">
-                        <button onClick={() => setActiveTab("movies")} className={`flex items-center gap-2 py-4 font-semibold text-xs tracking-wide uppercase border-b-2 transition-all ${activeTab === "movies" ? "border-indigo-500 text-indigo-600" : "border-transparent text-slate-400 hover:text-slate-700"}`}><Film size={14} /> {t("admin.tabs.movies", "Керування фільмами")}</button>
-                        <button onClick={() => setActiveTab("showtimes")} className={`flex items-center gap-2 py-4 font-semibold text-xs tracking-wide uppercase border-b-2 transition-all ${activeTab === "showtimes" ? "border-indigo-500 text-indigo-600" : "border-transparent text-slate-400 hover:text-slate-700"}`}><Calendar size={14} /> {t("admin.tabs.showtimes", "Керування розкладом")}</button>
-                        <button onClick={() => setActiveTab("stats")} className={`flex items-center gap-2 py-4 font-semibold text-xs tracking-wide uppercase border-b-2 transition-all ${activeTab === "stats" ? "border-indigo-500 text-indigo-600" : "border-transparent text-slate-400 hover:text-slate-700"}`}><BarChart3 size={14} /> {t("admin.tabs.stats", "Статистика та аналітика")}</button>
+                {!showMovieForm && !showShowtimeForm && (
+                    <div className="px-12 bg-white border-b border-slate-100/60 flex gap-8 pt-3">
+                        <button onClick={() => setActiveTab("movies")} className={`flex items-center gap-2 pb-5 font-semibold text-xs tracking-wider uppercase border-b-2 transition-all duration-200 ${activeTab === "movies" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-400 hover:text-slate-600"}`}><Film size={14} /> {t("admin.tabs.movies", "Керування фільмами")}</button>
+                        <button onClick={() => setActiveTab("showtimes")} className={`flex items-center gap-2 pb-5 font-semibold text-xs tracking-wider uppercase border-b-2 transition-all duration-200 ${activeTab === "showtimes" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-400 hover:text-slate-600"}`}><Calendar size={14} /> {t("admin.tabs.showtimes", "Керування розкладом")}</button>
+                        <button onClick={() => setActiveTab("stats")} className={`flex items-center gap-2 pb-5 font-semibold text-xs tracking-wider uppercase border-b-2 transition-all duration-200 ${activeTab === "stats" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-400 hover:text-slate-600"}`}><BarChart3 size={14} /> {t("admin.tabs.stats", "Статистика та аналітика")}</button>
                     </div>
                 )}
 
-                {/* Основний Контент */}
-                <div className="flex-1 overflow-y-auto p-10 bg-slate-50/20">
+                {/* Головний Контент */}
+                <div className="flex-1 overflow-y-auto p-12 space-y-6">
 
                     {/* ТАБ 1: КЕРУВАННЯ ФІЛЬМАМИ */}
                     {activeTab === "movies" && (
-                        showForm ? (
-                            <form onSubmit={handleSaveForm} className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm space-y-6 max-w-3xl mx-auto">
-                                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                        showMovieForm ? (
+                            <form onSubmit={handleSaveForm} className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-slate-100/50 space-y-7 max-w-4xl mx-auto">
+                                <div className="flex items-center justify-between border-b border-slate-50 pb-5">
                                     <button type="button" onClick={() => { setIsAdding(false); setEditingMovie(null); resetForm(); }} className="flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-slate-700 transition-colors"><ArrowLeft size={14} /> {t("admin.form.back", "Назад до списку")}</button>
-                                    <span className="text-xs font-bold text-indigo-500 bg-indigo-50/60 px-3 py-1 rounded-full">{editingMovie ? "Редагування фільму" : "Створення картки фільму"}</span>
+                                    <span className="text-xs font-bold text-blue-600 bg-blue-50/60 px-4 py-1.5 rounded-full border border-blue-100/20">{editingMovie ? "Редагування фільму" : "Створення картки фільму"}</span>
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     <div className="md:col-span-2">
-                                        <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-1.5">Назва фільму *</label>
-                                        <input required type="text" name="title" value={formData.title} onChange={handleInputChange} className="w-full px-4 py-2.5 rounded-xl border border-slate-200/70 text-slate-800 bg-slate-50/30 focus:bg-white focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-400 transition-all text-sm font-medium" placeholder="Наприклад, Інтерстеллар" />
+                                        <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2">Назва фільму *</label>
+                                        <input required type="text" name="title" value={formData.title} onChange={handleInputChange} className="w-full px-5 py-3.5 rounded-2xl border border-slate-200/60 text-slate-800 bg-slate-50/30 focus:bg-white focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 transition-all text-sm font-medium" placeholder="Наприклад, Фантастична четвірка" />
                                     </div>
                                     <div>
-                                        <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-1.5">Режисер</label>
-                                        <input type="text" name="director" value={formData.director} onChange={handleInputChange} className="w-full px-4 py-2.5 rounded-xl border border-slate-200/70 text-slate-800 bg-slate-50/30 focus:bg-white focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-400 transition-all text-sm" placeholder="К. Нолан" />
+                                        <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2">Режисер</label>
+                                        <input type="text" name="director" value={formData.director} onChange={handleInputChange} className="w-full px-5 py-3.5 rounded-2xl border border-slate-200/60 text-slate-800 bg-slate-50/30 focus:bg-white focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 transition-all text-sm" placeholder="Метт Шекман" />
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                     <div>
-                                        <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-1.5">Рік випуску *</label>
-                                        <input required type="number" name="year" value={formData.year} onChange={handleInputChange} className="w-full px-4 py-2.5 rounded-xl border border-slate-200/70 text-slate-800 bg-slate-50/30 focus:bg-white focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-400 transition-all text-sm" placeholder="2014" />
+                                        <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2">Рік випуску *</label>
+                                        <input required type="number" name="year" value={formData.year} onChange={handleInputChange} className="w-full px-5 py-3.5 rounded-2xl border border-slate-200/60 text-slate-800 bg-slate-50/30 focus:bg-white focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 transition-all text-sm" placeholder="2025" />
                                     </div>
                                     <div>
-                                        <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-1.5">Тривалість (хв) *</label>
-                                        <input required type="number" name="durationMin" value={formData.durationMin} onChange={handleInputChange} className="w-full px-4 py-2.5 rounded-xl border border-slate-200/70 text-slate-800 bg-slate-50/30 focus:bg-white focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-400 transition-all text-sm" placeholder="169" />
+                                        <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2">Тривалість (хв) *</label>
+                                        <input required type="number" name="durationMin" value={formData.durationMin} onChange={handleInputChange} className="w-full px-5 py-3.5 rounded-2xl border border-slate-200/60 text-slate-800 bg-slate-50/30 focus:bg-white focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 transition-all text-sm" placeholder="140" />
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2">Жанри (оберіть кліком) *</label>
-                                    <div className="flex flex-wrap gap-1.5 p-3.5 bg-slate-50/50 rounded-2xl border border-slate-100">
+                                    <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2.5">Жанри (оберіть кліком) *</label>
+                                    <div className="flex flex-wrap gap-2 p-4 bg-slate-50/40 rounded-2xl border border-slate-100">
                                         {genres.map((g) => {
                                             const isSel = selectedGenres.includes(g.name);
                                             return (
-                                                <button key={g.id} type="button" onClick={() => setSelectedGenres(p => p.includes(g.name) ? p.filter(n => n !== g.name) : [...p, g.name])} className={`px-3 py-1 rounded-lg text-xs font-medium transition-all border ${isSel ? "bg-indigo-500 border-indigo-500 text-white shadow-sm shadow-indigo-100" : "bg-white border-slate-200/60 text-slate-500 hover:border-slate-300"}`}>{g.name}</button>
+                                                <button key={g.id} type="button" onClick={() => setSelectedGenres(p => p.includes(g.name) ? p.filter(n => n !== g.name) : [...p, g.name])} className={`px-4 py-1.5 rounded-xl text-xs font-semibold transition-all border ${isSel ? "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-100/60" : "bg-white border-slate-200/60 text-slate-500 hover:border-slate-300"}`}>{g.name}</button>
                                             );
                                         })}
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-1.5">Опис сюжетної лінії *</label>
-                                    <textarea required rows="3" name="description" value={formData.description} onChange={handleInputChange} className="w-full px-4 py-2.5 rounded-xl border border-slate-200/70 text-slate-800 bg-slate-50/30 focus:bg-white focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-400 transition-all text-sm resize-none" placeholder="Короткий опис фільму..." />
+                                    <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2">Опис сюжетної лінії *</label>
+                                    <textarea required rows="4" name="description" value={formData.description} onChange={handleInputChange} className="w-full px-5 py-3.5 rounded-2xl border border-slate-200/60 text-slate-800 bg-slate-50/30 focus:bg-white focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 transition-all text-sm resize-none leading-relaxed" placeholder="Короткий опис фільму..." />
                                 </div>
-                                <div className="flex justify-end gap-3 border-t border-slate-100 pt-5">
-                                    <button type="submit" disabled={isSaving} className="flex items-center gap-2 bg-indigo-500 hover:bg-indigo-600 text-white px-6 py-2.5 rounded-xl text-xs font-semibold shadow-sm transition-all">{isSaving ? "Збереження..." : "Зберегти зміни"}</button>
+                                <div className="flex justify-end gap-3 border-t border-slate-50 pt-5">
+                                    <button type="submit" disabled={isSaving} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-7 py-3 rounded-2xl text-xs font-semibold shadow-md shadow-blue-100 transition-all">{isSaving ? "Збереження..." : "Зберегти зміни"}</button>
                                 </div>
                             </form>
                         ) : (
-                            <div className="space-y-5">
-                                <div className="flex flex-col sm:flex-row gap-4 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm items-center justify-between">
-                                    <span className="text-xs font-semibold text-slate-400">Усього в каталозі: {displayedMovies.length} фільмів</span>
+                            <div className="space-y-6">
+                                <div className="flex flex-col sm:flex-row gap-4 bg-white p-5 rounded-[2rem] border border-slate-100/60 shadow-sm items-center justify-between">
+                                    <span className="text-xs font-semibold text-slate-400 pl-2">Усього в каталозі: {displayedMovies.length} фільмів</span>
                                     <input
                                         type="text"
                                         placeholder="Пошук за назвою або режисером..."
                                         value={movieSearch}
                                         onChange={(e) => setMovieSearch(e.target.value)}
-                                        className="px-4 py-2 text-xs rounded-xl border border-slate-200/80 focus:outline-none focus:border-indigo-400 font-medium text-slate-700 w-full sm:max-w-xs transition-colors"
+                                        className="px-5 py-2.5 text-xs rounded-xl border border-slate-200/60 focus:outline-none focus:border-blue-400 font-medium text-slate-700 w-full sm:max-w-xs transition-colors"
                                     />
-                                    <button onClick={() => { setIsAdding(true); resetForm(); }} className="flex items-center gap-1.5 bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-sm shrink-0 transition-all"><Plus size={14} /> Додати новий фільм</button>
+                                    <button onClick={() => { setIsAdding(true); resetForm(); }} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-xs font-semibold shadow-sm shrink-0 transition-all"><Plus size={14} /> Додати новий фільм</button>
                                 </div>
 
-                                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                                <div className="bg-white rounded-[2.5rem] border border-slate-100/40 shadow-sm overflow-hidden">
                                     <table className="w-full text-left border-collapse">
                                         <thead>
-                                        <tr className="bg-slate-50/60 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100"><th className="px-6 py-3.5">Фільм</th><th className="px-6 py-3.5">Жанри</th><th className="px-6 py-3.5">Тривалість</th><th className="px-6 py-3.5 text-right">Дії</th></tr>
+                                        <tr className="bg-slate-50/50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100/60"><th className="px-8 py-4.5">Фільм</th><th className="px-8 py-4.5">Жанри</th><th className="px-8 py-4.5">Тривалість</th><th className="px-8 py-4.5 text-right">Дії</th></tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-50 text-xs">
                                         {displayedMovies.map((m) => (
-                                            <tr key={m.id} className="hover:bg-slate-50/30 transition-colors">
-                                                <td className="px-6 py-3 flex items-center gap-3">
-                                                    <img src={m.posterUrl || "https://via.placeholder.com/40x60"} alt="" className="w-8 h-11 rounded-md object-cover shadow-sm bg-slate-100" />
-                                                    <div><div className="font-bold text-slate-800">{m.title}</div><div className="text-[11px] text-slate-400 font-medium mt-0.5">{m.director || "Режисер не вказаний"}, {m.year}</div></div>
+                                            <tr key={m.id} className="hover:bg-slate-50/20 transition-colors">
+                                                <td className="px-8 py-4 flex items-center gap-4">
+                                                    <img src={m.posterUrl || "https://via.placeholder.com/40x60"} alt="" className="w-9 h-12 rounded-lg object-cover shadow-sm bg-slate-100 border border-slate-100" />
+                                                    <div><div className="font-bold text-slate-800 text-sm">{m.title}</div><div className="text-[11px] text-slate-400 font-medium mt-1">{m.director || "Режисер не вказаний"}, {m.year}</div></div>
                                                 </td>
-                                                <td className="px-6 py-3"><div className="flex flex-wrap gap-1">{m.genres?.map(g => <span key={g.genre.id} className="px-2 py-0.5 bg-slate-100 text-slate-500 text-[10px] font-medium rounded-md">{g.genre.name}</span>)}</div></td>
-                                                <td className="px-6 py-3 text-slate-500 font-medium">{m.durationMin} хв</td>
-                                                <td className="px-6 py-3 text-right">
-                                                    <div className="flex justify-end gap-1.5">
-                                                        <button onClick={() => handleStartEdit(m)} className="p-1.5 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50/50 rounded-lg transition-all"><Edit2 size={14} /></button>
-                                                        <button disabled={isDeleting} onClick={() => handleActionDelete(m)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50/50 rounded-lg transition-all"><Trash2 size={14} /></button>
+                                                <td className="px-8 py-4"><div className="flex flex-wrap gap-1">{m.genres?.map(g => <span key={g.genre.id} className="px-2.5 py-0.5 bg-slate-100 text-slate-500 text-[10px] font-medium rounded-md">{g.genre.name}</span>)}</div></td>
+                                                <td className="px-8 py-4 text-slate-500 font-medium">{m.durationMin} хв</td>
+                                                <td className="px-8 py-4 text-right">
+                                                    <div className="flex justify-end gap-2 pr-2">
+                                                        <button onClick={() => handleStartEdit(m)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50/60 rounded-xl transition-all"><Edit2 size={14} /></button>
+                                                        <button disabled={isDeleting} onClick={() => handleActionDelete(m)} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50/60 rounded-xl transition-all"><Trash2 size={14} /></button>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -469,117 +502,141 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
 
                     {/* ТАБ 2: КЕРУВАННЯ РОЗКЛАДОМ СЕАНСІВ */}
                     {activeTab === "showtimes" && (
-                        isAddingShowtime ? (
-                            <form onSubmit={handleCreateShowtime} className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm space-y-5 max-w-xl mx-auto">
-                                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-                                    <button type="button" onClick={() => setIsAddingShowtime(false)} className="flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-slate-700 transition-colors"><ArrowLeft size={14} /> Назад</button>
-                                    <span className="text-xs font-bold text-indigo-500 bg-indigo-50/60 px-3 py-1 rounded-full">Планування сеансу</span>
+                        showShowtimeForm ? (
+                            <form onSubmit={handleSaveShowtimeForm} className="bg-white p-10 rounded-[2.5rem] border border-slate-100/50 shadow-sm space-y-6 max-w-2xl mx-auto">
+                                <div className="flex items-center justify-between border-b border-slate-50 pb-5">
+                                    <button type="button" onClick={resetShowtimeForm} className="flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-slate-700 transition-colors"><ArrowLeft size={14} /> Назад</button>
+                                    <span className="text-xs font-bold text-blue-600 bg-blue-50/60 px-4 py-1.5 rounded-full border border-blue-100/20">
+                                        {editingShowtime ? "Редагування сеансу" : "Планування сеансу"}
+                                    </span>
                                 </div>
+
                                 <div>
-                                    <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-1.5">Оберіть Фільм зі списку *</label>
-                                    <select required value={showtimeData.movieId} onChange={e => setShowtimeData(p => ({ ...p, movieId: e.target.value }))} className="w-full px-4 py-2.5 rounded-xl border border-slate-200/70 text-slate-700 bg-slate-50/50 focus:bg-white text-xs font-medium focus:outline-none focus:border-indigo-400 transition-all">
+                                    <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2">Фільм (не підлягає зміні при редагуванні)</label>
+                                    <select
+                                        required
+                                        disabled={!!editingShowtime}
+                                        value={showtimeData.movieId}
+                                        onChange={e => setShowtimeData(p => ({ ...p, movieId: e.target.value }))}
+                                        className="w-full px-5 py-3 rounded-xl border border-slate-200/70 text-slate-700 bg-slate-50/40 focus:bg-white text-xs font-medium focus:outline-none focus:border-blue-400 transition-all disabled:opacity-50 disabled:bg-slate-100/60"
+                                    >
                                         <option value="">-- Виберіть кінострічку --</option>
                                         {movies.map(m => <option key={m.id} value={m.id}>{m.title} ({m.year})</option>)}
                                     </select>
                                 </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                                     <div>
-                                        <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-1.5">Кінотеатр *</label>
-                                        <select required value={showtimeData.theaterId} onChange={e => setShowtimeData(p => ({ ...p, theaterId: e.target.value, hallId: "" }))} className="w-full px-4 py-2.5 rounded-xl border border-slate-200/70 text-slate-700 bg-slate-50/50 focus:bg-white text-xs font-medium focus:outline-none focus:border-indigo-400 transition-all">
+                                        <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2">Кінотеатр</label>
+                                        <select
+                                            required
+                                            disabled={!!editingShowtime}
+                                            value={showtimeData.theaterId}
+                                            onChange={e => setShowtimeData(p => ({ ...p, theaterId: e.target.value, hallId: "" }))}
+                                            className="w-full px-5 py-3 rounded-xl border border-slate-200/70 text-slate-700 bg-slate-50/40 focus:bg-white text-xs font-medium focus:outline-none focus:border-blue-400 transition-all disabled:opacity-50 disabled:bg-slate-100/60"
+                                        >
                                             <option value="">-- Оберіть локацію --</option>
                                             {theaters.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-1.5">Кінозал *</label>
-                                        <select required disabled={!showtimeData.theaterId} value={showtimeData.hallId} onChange={e => setShowtimeData(p => ({ ...p, hallId: e.target.value }))} className="w-full px-4 py-2.5 rounded-xl border border-slate-200/70 text-slate-700 bg-slate-50/50 focus:bg-white text-xs font-medium focus:outline-none focus:border-indigo-400 transition-all disabled:opacity-40">
+                                        <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2">Кінозал</label>
+                                        <select
+                                            required
+                                            disabled={!!editingShowtime || !showtimeData.theaterId}
+                                            value={showtimeData.hallId}
+                                            onChange={e => setShowtimeData(p => ({ ...p, hallId: e.target.value }))}
+                                            className="w-full px-5 py-3 rounded-xl border border-slate-200/70 text-slate-700 bg-slate-50/40 focus:bg-white text-xs font-medium focus:outline-none focus:border-blue-400 transition-all disabled:opacity-50 disabled:bg-slate-100/60"
+                                        >
                                             <option value="">-- Оберіть зал --</option>
                                             {availableHalls.map(h => <option key={h.id} value={h.id}>{h.name} ({h.type || "2D/3D"})</option>)}
                                         </select>
                                     </div>
                                 </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                                     <div>
-                                        <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-1.5">Дата та Час Початку *</label>
-                                        <input required type="datetime-local" value={showtimeData.startTime} onChange={e => setShowtimeData(p => ({ ...p, startTime: e.target.value }))} className="w-full px-4 py-2.5 rounded-xl border border-slate-200/70 text-slate-700 bg-slate-50/50 focus:bg-white text-xs focus:outline-none focus:border-indigo-400 transition-all" />
+                                        <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2">Дата та Час Початку *</label>
+                                        <input required type="datetime-local" value={showtimeData.startTime} onChange={e => setShowtimeData(p => ({ ...p, startTime: e.target.value }))} className="w-full px-5 py-3 rounded-xl border border-slate-200/70 text-slate-700 bg-slate-50/40 focus:bg-white text-xs focus:outline-none focus:border-blue-400 transition-all" />
                                     </div>
                                     <div>
-                                        <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-1.5">Ціна квитка (₴)</label>
-                                        <input type="number" value={showtimeData.price} onChange={e => setShowtimeData(p => ({ ...p, price: e.target.value }))} className="w-full px-4 py-2.5 rounded-xl border border-slate-200/70 text-slate-700 bg-slate-50/50 focus:bg-white text-xs font-bold transition-all" />
+                                        <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2">Ціна квитка (₴)</label>
+                                        <input type="number" value={showtimeData.price} onChange={e => setShowtimeData(p => ({ ...p, price: e.target.value }))} className="w-full px-5 py-3 rounded-xl border border-slate-200/70 text-slate-700 bg-slate-50/40 focus:bg-white text-xs font-bold transition-all" />
                                     </div>
                                 </div>
-                                <div className="flex justify-end pt-4 border-t border-slate-100">
-                                    <button type="submit" disabled={isSaving} className="flex items-center gap-1.5 bg-indigo-500 hover:bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-xs font-semibold shadow-sm transition-all"><Save size={14} /> Створити сеанс</button>
+                                <div className="flex justify-end pt-5 border-t border-slate-50">
+                                    <button type="submit" disabled={isSaving} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl text-xs font-semibold shadow-sm transition-all"><Save size={14} /> {editingShowtime ? "Зберегти зміни" : "Створити сеанс"}</button>
                                 </div>
                             </form>
                         ) : (
-                            <div className="space-y-4">
-                                <div className="flex flex-col sm:flex-row gap-4 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm items-center justify-between">
-                                    <span className="text-xs font-semibold text-slate-400">Активний розклад: {bundledShowtimes.length} фільм(ів)</span>
+                            <div className="space-y-5">
+                                <div className="flex flex-col sm:flex-row gap-4 bg-white p-5 rounded-[2rem] border border-slate-100/60 shadow-sm items-center justify-between">
+                                    <span className="text-xs font-semibold text-slate-400 pl-2">Активний розклад: {bundledShowtimes.length} фільм(ів)</span>
                                     <input
                                         type="text"
                                         placeholder="Шукати фільм або кінотеатр у розкладі..."
                                         value={showtimeSearch}
                                         onChange={(e) => setShowtimeSearch(e.target.value)}
-                                        className="px-4 py-2 text-xs rounded-xl border border-slate-200/80 focus:outline-none focus:border-indigo-400 font-medium text-slate-700 w-full sm:max-w-xs transition-colors"
+                                        className="px-4 py-2.5 text-xs rounded-xl border border-slate-200/80 focus:outline-none focus:border-blue-400 font-medium text-slate-700 w-full sm:max-w-xs transition-colors"
                                     />
-                                    <button onClick={() => setIsAddingShowtime(true)} className="flex items-center gap-1.5 bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-sm shrink-0 transition-all"><Plus size={14} /> Створити новий сеанс</button>
+                                    <button onClick={() => setIsAddingShowtime(true)} className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-xs font-semibold shadow-sm shrink-0 transition-all"><Plus size={14} /> Створити новий сеанс</button>
                                 </div>
 
                                 {bundledShowtimes.length === 0 ? (
-                                    <div className="p-12 text-center text-slate-400 font-medium bg-white rounded-2xl border border-slate-100">Сеансів за вказаними критеріями не знайдено.</div>
+                                    <div className="p-14 text-center text-slate-400 font-medium bg-white rounded-[2rem] border border-slate-100/60">Сеансів за вказаними критеріями не знайдено.</div>
                                 ) : (
-                                    <div className="space-y-3">
+                                    <div className="space-y-4">
                                         {bundledShowtimes.map((movieGroup) => {
                                             const isMovieExpanded = !!expandedMovies[movieGroup.movieId];
                                             return (
-                                                <div key={movieGroup.movieId} className="bg-white rounded-2xl border border-slate-100/70 shadow-sm overflow-hidden transition-all">
+                                                <div key={movieGroup.movieId} className="bg-white rounded-[2rem] border border-slate-100/40 shadow-sm overflow-hidden transition-all">
 
                                                     {/* Рівень 1: Фільм */}
-                                                    <div onClick={() => toggleMovieExpand(movieGroup.movieId)} className="p-4 flex items-center justify-between cursor-pointer hover:bg-slate-50/40 select-none transition-colors">
-                                                        <div className="flex items-center gap-3">
-                                                            <img src={movieGroup.posterUrl || "https://via.placeholder.com/30x40"} alt="" className="w-7 h-10 rounded-md object-cover border bg-slate-50" />
+                                                    <div onClick={() => toggleMovieExpand(movieGroup.movieId)} className="p-5 flex items-center justify-between cursor-pointer hover:bg-slate-50/20 select-none transition-colors">
+                                                        <div className="flex items-center gap-4">
+                                                            <img src={movieGroup.posterUrl || "https://via.placeholder.com/30x40"} alt="" className="w-8 h-11 rounded-lg object-cover border border-slate-100 bg-slate-50 shadow-sm" />
                                                             <div>
-                                                                <h4 className="font-bold text-slate-800 text-sm">{movieGroup.title}</h4>
-                                                                <span className="inline-block mt-1 text-[10px] font-medium text-indigo-500 bg-indigo-50/50 px-2 py-0.5 rounded-md">
+                                                                <h4 className="font-bold text-slate-800 text-base">{movieGroup.title}</h4>
+                                                                <span className="inline-block mt-1.5 text-[10px] font-bold text-blue-600 bg-blue-50/50 px-2.5 py-0.5 rounded-md">
                                                                     Днів із запланованими сеансами: {movieGroup.dates.length}
                                                                 </span>
                                                             </div>
                                                         </div>
-                                                        <div className="text-slate-400">{isMovieExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</div>
+                                                        <div className="text-slate-400 pr-2">{isMovieExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</div>
                                                     </div>
 
                                                     {/* Рівень 2: Дати всередині фільму */}
                                                     <AnimatePresence initial={false}>
                                                         {isMovieExpanded && (
-                                                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="bg-slate-50/20 border-t border-slate-50 px-4 pb-4 pt-1 space-y-2.5">
+                                                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="bg-slate-50/10 border-t border-slate-50 px-5 pb-5 pt-2 space-y-3">
                                                                 {movieGroup.dates.map((dateGroup) => {
                                                                     const dateKeyCombined = `${movieGroup.movieId}-${dateGroup.dateKey}`;
                                                                     const isDateExpanded = !!expandedDates[dateKeyCombined];
 
                                                                     return (
-                                                                        <div key={dateGroup.dateKey} className="space-y-1.5 mt-2">
-                                                                            <div onClick={() => toggleDateExpand(movieGroup.movieId, dateGroup.dateKey)} className="text-[10px] font-semibold uppercase text-slate-400 hover:text-slate-600 tracking-wider pl-2.5 py-2 flex items-center justify-between cursor-pointer select-none bg-slate-50 rounded-xl transition-colors">
+                                                                        <div key={dateGroup.dateKey} className="space-y-2 mt-1">
+                                                                            <div onClick={() => toggleDateExpand(movieGroup.movieId, dateGroup.dateKey)} className="text-[10px] font-bold uppercase text-slate-400 hover:text-slate-600 tracking-wider pl-3.5 py-2.5 flex items-center justify-between cursor-pointer select-none bg-slate-50 rounded-xl transition-colors">
                                                                                 <span>{dateGroup.formattedDate} ({dateGroup.items.length} сеанс.)</span>
-                                                                                <div className="pr-1.5 text-slate-400">{isDateExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}</div>
+                                                                                <div className="pr-2 text-slate-400">{isDateExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}</div>
                                                                             </div>
 
                                                                             {/* Рівень 3: Список конкретних сеансів */}
                                                                             <AnimatePresence initial={false}>
                                                                                 {isDateExpanded && (
-                                                                                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="bg-white rounded-xl border border-slate-100/70 divide-y divide-slate-50 overflow-hidden shadow-2xl shadow-slate-100/40">
+                                                                                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="bg-white rounded-xl border border-slate-100/50 divide-y divide-slate-50 overflow-hidden shadow-sm">
                                                                                         {dateGroup.items.map((st) => (
-                                                                                            <div key={st.id} className="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between text-xs font-medium gap-2 hover:bg-slate-50/30 transition-colors">
-                                                                                                <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                                                                                                    <span className="text-slate-800 font-bold min-w-[130px]">{st.hall?.theater?.name}</span>
-                                                                                                    <span className="px-1.5 py-0.5 bg-slate-100 rounded text-[10px] font-medium text-slate-400 uppercase tracking-wide">{st.hall?.name}</span>
-                                                                                                    <span className="text-indigo-500 font-bold bg-indigo-50/60 px-2 py-0.5 rounded-md text-[11px] tracking-wide">
+                                                                                            <div key={st.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between text-xs font-medium gap-3 hover:bg-slate-50/10 transition-colors">
+                                                                                                <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5">
+                                                                                                    <span className="text-slate-800 font-bold min-w-[140px]">{st.hall?.theater?.name}</span>
+                                                                                                    <span className="px-2 py-0.5 bg-slate-100 rounded-md text-[10px] font-bold text-slate-400 uppercase tracking-wide">{st.hall?.name}</span>
+                                                                                                    <span className="text-blue-600 font-bold bg-blue-50/70 px-2.5 py-0.5 rounded-md text-[11px] tracking-wide">
                                                                                                         {st.startTime ? new Date(st.startTime).toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" }) : "--:--"}
                                                                                                     </span>
                                                                                                 </div>
-                                                                                                <div className="flex items-center justify-between sm:justify-end gap-5">
-                                                                                                    <span className="text-slate-700 font-bold">{st.price || 120} ₴</span>
-                                                                                                    <button type="button" onClick={() => handleActionDeleteShowtime(st)} className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={13} /></button>
+                                                                                                <div className="flex items-center justify-between sm:justify-end gap-3">
+                                                                                                    <span className="text-slate-700 font-bold text-sm mr-2">{st.price || 120} ₴</span>
+                                                                                                    <button type="button" onClick={() => handleStartEditShowtime(st)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50/60 rounded-xl transition-all" title="Редагувати сеанс"><Edit2 size={13} /></button>
+                                                                                                    <button type="button" onClick={() => handleActionDeleteShowtime(st)} className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all" title="Видалити сеанс"><Trash2 size={13} /></button>
                                                                                                 </div>
                                                                                             </div>
                                                                                         ))}
@@ -601,65 +658,64 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
                         )
                     )}
 
-                    {/* ТАБ 3: СТАТИСТИКА ТА АНАЛІТИКА (ЖИВІ ГРАФІКИ) */}
+                    {/* ТАБ 3: СТАТИСТИКА ТА АНАЛІТИКА */}
                     {activeTab === "stats" && (
                         <div className="space-y-8">
-                            {/* Картки метрик */}
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                                <div className="bg-white p-6 rounded-[1.8rem] border border-slate-100 shadow-sm flex items-center gap-4">
-                                    <div className="p-3 bg-emerald-50 text-emerald-500 rounded-2xl"><DollarSign size={22} /></div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div className="bg-white p-7 rounded-[2rem] border border-slate-100/40 shadow-sm flex items-center gap-5">
+                                    <div className="p-3.5 bg-emerald-50 text-emerald-500 rounded-2xl"><DollarSign size={22} /></div>
                                     <div>
                                         <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Касові збори</div>
-                                        <div className="text-lg font-bold text-slate-800 mt-0.5">{stats.revenue.toLocaleString()} ₴</div>
+                                        <div className="text-xl font-bold text-slate-800 mt-1">{stats.revenue.toLocaleString()} ₴</div>
                                     </div>
                                 </div>
-                                <div className="bg-white p-6 rounded-[1.8rem] border border-slate-100 shadow-sm flex items-center gap-4">
-                                    <div className="p-3 bg-indigo-50 text-indigo-500 rounded-2xl"><Ticket size={22} /></div>
+                                <div className="bg-white p-7 rounded-[2rem] border border-slate-100/40 shadow-sm flex items-center gap-5">
+                                    <div className="p-3.5 bg-blue-50 text-blue-600 rounded-2xl"><Ticket size={22} /></div>
                                     <div>
                                         <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Продано квитків</div>
-                                        <div className="text-lg font-bold text-slate-800 mt-0.5">{stats.ticketsSold} од.</div>
+                                        <div className="text-xl font-bold text-slate-800 mt-1">{stats.ticketsSold} од.</div>
                                     </div>
                                 </div>
-                                <div className="bg-white p-6 rounded-[1.8rem] border border-slate-100 shadow-sm flex items-center gap-4">
-                                    <div className="p-3 bg-purple-50 text-purple-500 rounded-2xl"><TrendingUp size={22} /></div>
+                                <div className="bg-white p-7 rounded-[2rem] border border-slate-100/40 shadow-sm flex items-center gap-5">
+                                    <div className="p-3.5 bg-purple-50 text-purple-500 rounded-2xl"><TrendingUp size={22} /></div>
                                     <div>
                                         <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Заповнюваність залів</div>
-                                        <div className="text-lg font-bold text-slate-800 mt-0.5">{stats.occupancyRate}%</div>
+                                        <div className="text-xl font-bold text-slate-800 mt-1">{stats.occupancyRate}%</div>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Кастомний графік на всю ширину */}
-                            <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
+                            {/* Кастомний графік */}
+                            <div className="bg-white p-10 rounded-[2.5rem] border border-slate-100/40 shadow-sm">
                                 <div className="mb-6">
-                                    <h3 className="font-bold text-slate-800 text-sm">Касові збори за фільмами</h3>
-                                    <p className="text-xs text-slate-400 font-normal mt-0.5">Загальна фінансова виручка від продажу квитків на кожну стрічку</p>
+                                    <h3 className="font-bold text-slate-800 text-base">Касові збори за фільмами</h3>
+                                    <p className="text-xs text-slate-400 font-normal mt-1 tracking-wide">Загальна фінансова виручка від продажу квитків на кожну стрічку</p>
                                 </div>
 
                                 {isStatsLoading ? (
-                                    <div className="text-center text-slate-400 py-12 text-xs font-medium animate-pulse">Оновлення аналітичних даних з сервера...</div>
+                                    <div className="text-center text-slate-400 py-14 text-xs font-medium animate-pulse">Оновлення аналітичних даних з сервера...</div>
                                 ) : stats.topMovies.length === 0 ? (
-                                    <div className="text-center text-slate-400 py-12 text-xs font-medium">Дані про касові збори наразі відсутні.</div>
+                                    <div className="text-center text-slate-400 py-14 text-xs font-medium">Дані про касові збори наразі відсутні.</div>
                                 ) : (
-                                    <div className="space-y-5 w-full">
+                                    <div className="space-y-6 w-full">
                                         {stats.topMovies.map((movie, index) => {
                                             const currentRevenue = movie.revenue || 0;
                                             const percent = maxRevenue > 0 ? Math.min(100, Math.max(6, (currentRevenue / maxRevenue) * 100)) : 0;
 
                                             return (
-                                                <div key={movie.id || index} className="space-y-2">
+                                                <div key={movie.id || index} className="space-y-2.5">
                                                     <div className="flex justify-between text-xs font-semibold text-slate-600">
-                                                        <span className="tracking-wide text-slate-700">{movie.title}</span>
-                                                        <span className="text-indigo-500 font-bold bg-indigo-50/40 px-2.5 py-0.5 rounded-lg">
+                                                        <span className="tracking-wide text-slate-700 text-sm">{movie.title}</span>
+                                                        <span className="text-blue-600 font-bold bg-blue-50/50 px-3 py-1 rounded-xl">
                                                             {currentRevenue.toLocaleString()} ₴
                                                         </span>
                                                     </div>
-                                                    <div className="w-full h-3.5 bg-slate-50 rounded-full overflow-hidden border border-slate-100/30">
+                                                    <div className="w-full h-4 bg-slate-50 rounded-full overflow-hidden border border-slate-100/30">
                                                         <motion.div
                                                             initial={{ width: 0 }}
                                                             animate={{ width: `${percent}%` }}
                                                             transition={{ duration: 0.9, ease: "easeOut" }}
-                                                            className="h-full bg-gradient-to-r from-indigo-400 via-indigo-500 to-indigo-500 rounded-full shadow-inner"
+                                                            className="h-full bg-gradient-to-r from-blue-400 via-blue-500 to-blue-600 rounded-full shadow-inner"
                                                         />
                                                     </div>
                                                 </div>
@@ -677,8 +733,8 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
                     <AnimatePresence>
                         {pendingDelete && (
                             <motion.div initial={{ opacity: 0, y: 15, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 15, scale: 0.98 }} className="bg-slate-900 text-white px-5 py-3.5 rounded-2xl shadow-xl flex items-center gap-5 border border-slate-800 justify-between">
-                                <div className="flex items-center gap-2.5"><div className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" /><span className="text-xs font-medium">Вилучено фільм <b className="text-indigo-300 font-bold">«{pendingDelete.title}»</b> ({timeLeft}с)</span></div>
-                                <button type="button" onClick={handleUndo} className="flex items-center gap-1 bg-indigo-500 hover:bg-indigo-600 text-white px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all"><Undo2 size={12} /> Відновити</button>
+                                <div className="flex items-center gap-2.5"><div className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" /><span className="text-xs font-medium">Вилучено фільм <b className="text-blue-300 font-bold">«{pendingDelete.title}»</b> ({timeLeft}с)</span></div>
+                                <button type="button" onClick={handleUndo} className="flex items-center gap-1 bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all"><Undo2 size={12} /> Відновити</button>
                             </motion.div>
                         )}
                     </AnimatePresence>
@@ -686,8 +742,8 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
                     <AnimatePresence>
                         {pendingDeleteShowtime && (
                             <motion.div initial={{ opacity: 0, y: 15, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 15, scale: 0.98 }} className="bg-slate-900 text-white px-5 py-3.5 rounded-2xl shadow-xl flex items-center gap-5 border border-slate-800 justify-between">
-                                <div className="flex items-center gap-2.5"><div className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" /><span className="text-xs font-medium">Вилучено сеанс фільму <b className="text-indigo-300 font-bold">«{pendingDeleteShowtime.movie?.title}»</b> ({showtimeTimeLeft}с)</span></div>
-                                <button type="button" onClick={handleUndoShowtime} className="flex items-center gap-1 bg-indigo-500 hover:bg-indigo-600 text-white px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all"><Undo2 size={12} /> Відновити</button>
+                                <div className="flex items-center gap-2.5"><div className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" /><span className="text-xs font-medium">Вилучено сеанс фільму <b className="text-blue-300 font-bold">«{pendingDeleteShowtime.movie?.title}»</b> ({showtimeTimeLeft}с)</span></div>
+                                <button type="button" onClick={handleUndoShowtime} className="flex items-center gap-1 bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all"><Undo2 size={12} /> Відновити</button>
                             </motion.div>
                         )}
                     </AnimatePresence>

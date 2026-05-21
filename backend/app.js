@@ -627,6 +627,37 @@ app.get('/api/showtimes', async (req, res) => {
     }
 });
 
+/**
+ * АДМІН-ФУНКЦІЯ: Оновлення даних існуючого сеансу (час, зал, ціна)
+ */
+app.put('/api/showtimes/:id', authenticateToken, isAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { movieId, hallId, startTime, price } = req.body;
+        const showtimeId = parseInt(id);
+
+        // Перевіряємо чи існує сеанс
+        const showtimeExists = await prisma.showtime.findUnique({ where: { id: showtimeId } });
+        if (!showtimeExists) return res.status(404).json({ error: 'Сеанс не знайдено.' });
+
+        const updatedShowtime = await prisma.showtime.update({
+            where: { id: showtimeId },
+            data: {
+                movieId: movieId ? parseInt(movieId) : undefined,
+                hallId: hallId ? parseInt(hallId) : undefined,
+                startTime: startTime ? new Date(startTime) : undefined,
+                price: price ? parseFloat(price) : undefined
+            }
+        });
+
+        logger.info(`Showtime ID ${showtimeId} successfully updated by admin: ${req.user.login}`);
+        res.json(updatedShowtime);
+    } catch (error) {
+        logger.error(`Error updating showtime ID ${req.params.id}: ${error.message}`);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 app.get('/api/bookings/showtime/:showtimeId', bookingController.getBookingData);
 app.post('/api/bookings', authenticateToken, bookingController.createBooking);
 app.get('/api/users/my-bookings', authenticateToken, bookingController.getUserBookings);
