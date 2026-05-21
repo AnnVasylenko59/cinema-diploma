@@ -89,13 +89,11 @@
     "settings": "Settings",
     "favorites": "Favorites",
     "history": "Booking History",
-    "ratings": "My Ratings",
     "logout": "Logout"
   },
   "filters": {
     "search_placeholder": "Search by title or director...",
     "genres_label": "Genres",
-    "rating_label": "Rating",
     "reset": "Reset",
     "time_options": {
       "any": "Any time",
@@ -160,10 +158,11 @@
     "found_count": "Found: {{count}}",
     "sync": "Syncing movies...",
     "not_found": "Nothing found",
-    "not_found_desc": "Try changing keywords, selecting other genres, or lowering the rating threshold.",
+    "not_found_desc": "Try changing keywords or selecting other filtering options.",
     "reset_filters": "Reset all filters"
   },
   "theaters": {
+    "currently_selected": "Selected movie:",
     "no_sessions_title": "No sessions found",
     "no_sessions_text": "Unfortunately, there are no available sessions for this movie in this city on the selected date.",
     "no_movie_title": "No movie selected",
@@ -198,19 +197,6 @@
     "empty_text": "Add movies to your favorites to keep them handy.",
     "back_to_afisha": "Back to movies"
   },
-  "favorites": {
-    "title": "Favorites",
-    "loading": "Loading...",
-    "empty_title": "It's empty here",
-    "empty_text": "Add movies to your favorites to keep them handy.",
-    "back_to_afisha": "Back to movies"
-  },
-  "ratings": {
-    "title": "My Ratings",
-    "empty_title": "No ratings yet",
-    "empty_text": "Your reviews help others choose the best movies. Rate your first movie today!",
-    "to_catalog": "To catalog"
-  },
   "theaters_map": {
     "sidebar_title": "City Theaters",
     "no_showtimes": "No showtimes",
@@ -229,7 +215,6 @@
     "network_title": "Connection lost",
     "network_message": "It seems you are offline. Please check your internet connection and Wi-Fi settings, then try again."
   },
-
   "pdf_ticket": {
     "header": "CINEMA APP PLUS",
     "subtitle": "Electronic Movie Ticket",
