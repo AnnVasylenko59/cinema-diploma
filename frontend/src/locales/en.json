@@ -187,6 +187,7 @@
     "row": "Row",
     "seat": "Seat",
     "confirmed": "Confirmed",
+    "download_pdf": "Download PDF",
     "empty_title": "History is empty",
     "empty_text": "You haven't booked any seats yet."
   },

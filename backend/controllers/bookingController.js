@@ -156,7 +156,6 @@ const bookingController = {
         try {
             const { bookingId } = req.params;
             const bId = parseInt(bookingId);
-
             const lang = req.query.lang || 'uk';
 
             const booking = await prisma.booking.findUnique({
@@ -186,9 +185,8 @@ const bookingController = {
                     cinema: 'Кінотеатр: ',
                     hall: 'Зал: ',
                     time: 'Час: ',
-                    seat: 'Місце',
                     row: 'Ряд',
-                    chair: 'Крісло',
+                    seats: 'Місця: ',
                     currency: 'грн',
                     total: 'Всього сплачено: ',
                     qrInfo: 'Контроль на вході за QR-кодом'
@@ -199,9 +197,8 @@ const bookingController = {
                     cinema: 'Cinema: ',
                     hall: 'Hall: ',
                     time: 'Time: ',
-                    seat: 'Ticket',
                     row: 'Row',
-                    chair: 'Seat',
+                    seats: 'Seats: ',
                     currency: 'UAH',
                     total: 'Total paid: ',
                     qrInfo: 'Entrance control via QR code'
@@ -213,16 +210,26 @@ const bookingController = {
             const verificationUrl = `https://cinema-diploma.vercel.app/tickets/verify/${booking.id}`;
             const qrCodeDataUrl = await QRCode.toDataURL(verificationUrl, { margin: 1, width: 150 });
 
-            const doc = new PDFDocument({ size: 'A6', margin: 15 });
+            // Якщо квитків дуже багато (наприклад, > 6 рядів після групування), перемикаємо формат на A5 для охайності
+            const fontPath = path.join(__dirname, '..', 'utils', 'fonts', 'Roboto-Regular.ttf');
+            const fontBoldPath = path.join(__dirname, '..', 'utils', 'fonts', 'Roboto-Bold.ttf');
+            const useBold = fs.existsSync(fontBoldPath) ? fontBoldPath : fontPath;
+
+            const rowsMap = {};
+            booking.tickets.forEach(tick => {
+                const rNum = tick.seat.rowNum;
+                if (!rowsMap[rNum]) rowsMap[rNum] = [];
+                rowsMap[rNum].push(tick.seat.seatNum);
+            });
+
+            const totalRowsCount = Object.keys(rowsMap).length;
+            const pdfSize = totalRowsCount > 5 ? 'A5' : 'A6';
+
+            const doc = new PDFDocument({ size: pdfSize, margin: 15 });
 
             res.setHeader('Content-Type', 'application/pdf');
             res.setHeader('Content-Disposition', `attachment; filename=ticket-${booking.id}.pdf`);
             doc.pipe(res);
-
-            const fontPath = path.join(__dirname, '..', 'utils', 'fonts', 'Roboto-Regular.ttf');
-            const fontBoldPath = path.join(__dirname, '..', 'utils', 'fonts', 'Roboto-Bold.ttf');
-
-            const useBold = fs.existsSync(fontBoldPath) ? fontBoldPath : fontPath;
 
             doc.font(useBold).fillColor('#1E293B').fontSize(16).text(translation.header, { align: 'center' });
             doc.moveDown(0.15);
@@ -249,18 +256,21 @@ const bookingController = {
             doc.strokeColor('#E2E8F0').lineWidth(0.5).moveTo(15, doc.y).lineTo(doc.page.width - 15, doc.y).stroke();
             doc.moveDown(0.5);
 
-            doc.font(fontPath).fillColor('#334155').fontSize(8.5);
-            booking.tickets.forEach((tick, i) => {
-                doc.text(`${translation.seat} ${i + 1}: ${translation.row} ${tick.seat.rowNum}, ${translation.chair} ${tick.seat.seatNum} (${tick.price} ${translation.currency})`, { lineGap: 2 });
+            doc.font(fontPath).fillColor('#334155').fontSize(9);
+
+            Object.keys(rowsMap).sort((a, b) => Number(a) - Number(b)).forEach(rowNum => {
+                const sortedSeats = rowsMap[rowNum].sort((a, b) => a - b).join(', ');
+                doc.font(useBold).text(`${translation.row} ${rowNum}: `, { Dessert: true, continued: true })
+                    .font(fontPath).text(sortedSeats, { lineGap: 2 });
             });
 
             doc.moveDown(0.6);
 
             const total = booking.tickets.reduce((sum, tick) => sum + tick.price, 0);
             doc.font(useBold).fillColor('#047857').fontSize(11).text(`${translation.total} ${total} ${translation.currency}`, { align: 'center' });
-            doc.moveDown(0.5);
+            doc.moveDown(0.4);
 
-            const qrWidth = 90;
+            const qrWidth = pdfSize === 'A5' ? 110 : 90;
             const qrX = (doc.page.width - qrWidth) / 2;
             doc.image(qrCodeDataUrl, qrX, doc.y, { width: qrWidth });
 
