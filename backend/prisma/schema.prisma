@@ -24,25 +24,25 @@ model User {
 }
 
 model Movie {
-  id           Int       @id @default(autoincrement())
-  title        String
-  year         Int
-  durationMin  Int
-  backdropUrl  String?
-  posterUrl    String?
-  trailerUrl   String?
-  description  String
-  rating       Float?
-  director     String?
-  addedAt      DateTime  @default(now())
-  genres       MovieGenre[]
-  showtimes    Showtime[]
-  watchlist    WatchlistItem[]
+  id          Int             @id @default(autoincrement())
+  title       String
+  year        Int
+  durationMin Int
+  backdropUrl String?
+  posterUrl   String?
+  trailerUrl  String?
+  description String
+  rating      Float?
+  director    String?
+  addedAt     DateTime        @default(now())
+  genres      MovieGenre[]
+  showtimes   Showtime[]
+  watchlist   WatchlistItem[]
 }
 
 model Genre {
-  id    Int    @id @default(autoincrement())
-  name  String @unique
+  id     Int          @id @default(autoincrement())
+  name   String       @unique
   movies MovieGenre[]
 }
 
@@ -56,20 +56,20 @@ model MovieGenre {
 }
 
 model City {
-  id        Int       @id @default(autoincrement())
-  name      String    @unique
-  lat       Float
-  lng       Float
-  theaters  Theater[]
+  id       Int       @id @default(autoincrement())
+  name     String    @unique
+  lat      Float
+  lng      Float
+  theaters Theater[]
 
   @@map("City")
 }
 
 model Theater {
-  id      Int      @id @default(autoincrement())
+  id      Int     @id @default(autoincrement())
   name    String
-  cityId  Int      @map("cityId")
-  city    City     @relation(fields: [cityId], references: [id])
+  cityId  Int     @map("cityId")
+  city    City    @relation(fields: [cityId], references: [id])
   coords  String
   address String?
   phone   String?
@@ -79,34 +79,34 @@ model Theater {
 }
 
 model Hall {
-  id        Int      @id @default(autoincrement())
-  name      String
+  id         Int        @id @default(autoincrement())
+  name       String
   totalSeats Int
-  theaterId Int
-  theater   Theater @relation(fields: [theaterId], references: [id])
-  seats     Seat[]
-  showtimes Showtime[]
+  theaterId  Int
+  theater    Theater    @relation(fields: [theaterId], references: [id])
+  seats      Seat[]
+  showtimes  Showtime[]
 }
 
 model Seat {
-  id          Int     @id @default(autoincrement())
+  id          Int      @id @default(autoincrement())
   rowNum      Int
   seatNum     Int
-  isAvailable Boolean @default(true)
+  isAvailable Boolean  @default(true)
   type        String
   hallId      Int
-  hall        Hall    @relation(fields: [hallId], references: [id])
+  hall        Hall     @relation(fields: [hallId], references: [id])
   tickets     Ticket[]
 }
 
 model Showtime {
-  id        Int      @id @default(autoincrement())
+  id        Int       @id @default(autoincrement())
   startTime DateTime
   price     Float
   movieId   Int
   hallId    Int
-  movie     Movie   @relation(fields: [movieId], references: [id])
-  hall      Hall    @relation(fields: [hallId], references: [id])
+  movie     Movie     @relation(fields: [movieId], references: [id])
+  hall      Hall      @relation(fields: [hallId], references: [id])
   bookings  Booking[]
 }
 
@@ -118,6 +118,7 @@ model Booking {
   showtime   Showtime @relation(fields: [showtimeId], references: [id])
   tickets    Ticket[]
   createdAt  DateTime @default(now())
+  isUsed     Boolean  @default(false)
 }
 
 model Ticket {
@@ -140,7 +141,7 @@ model WatchlistItem {
 }
 
 model Person {
-  id       Int    @id @default(autoincrement())
-  fullName String
+  id        Int       @id @default(autoincrement())
+  fullName  String
   birthdate DateTime?
 }

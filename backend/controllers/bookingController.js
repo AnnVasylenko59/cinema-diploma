@@ -1,10 +1,29 @@
 const { PrismaClient } = require('@prisma/client');
 const PDFDocument = require('pdfkit');
-const QRCode = require('qrcode');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
+const QRCode = require('qrcode');
 
 const prisma = new PrismaClient();
+
+/**
+ *
+ */
+function getLocalIpAddress() {
+    const interfaces = os.networkInterfaces();
+    for (const devName in interfaces) {
+        const iface = interfaces[devName];
+        for (let i = 0; i < iface.length; i++) {
+            const alias = iface[i];
+            // Враховуємо, що в різних версіях Node.js family може бути рядком 'IPv4' або числом 4
+            if ((alias.family === 'IPv4' || alias.family === 4) && alias.address !== '127.0.0.1' && !alias.internal) {
+                return alias.address;
+            }
+        }
+    }
+    return 'localhost';
+}
 
 /**
  * Контролер реалізує критичний шар бізнес-логіки — керування життєвим циклом бронювань.
@@ -207,7 +226,12 @@ const bookingController = {
             const translation = dict[lang] || dict['uk'];
             const locale = lang === 'uk' ? 'uk-UA' : 'en-US';
 
-            const verificationUrl = `https://cinema-diploma.vercel.app/tickets/verify/${booking.id}`;
+            const localIP = getLocalIpAddress();
+            const verificationUrl = `http://${localIP}:5173/validate-ticket/${booking.id}`;
+
+            // Логуємо згенероване посилання в консоль бекенду для контролю
+            console.log(`[QR GENERATED] Local Wi-Fi Validation Link: ${verificationUrl}`);
+
             const qrCodeDataUrl = await QRCode.toDataURL(verificationUrl, { margin: 1, width: 150 });
 
             // Якщо квитків дуже багато (наприклад, > 6 рядів після групування), перемикаємо формат на A5 для охайності

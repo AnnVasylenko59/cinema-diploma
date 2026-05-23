@@ -16,6 +16,7 @@ import { HomePage } from "../components/pages/home/HomePage.jsx";
 import { TheatersPage } from "../components/pages/theaters/TheatersPage.jsx";
 import { BookingPage } from "../components/pages/booking/BookingPage.jsx";
 import { ConfirmationPage } from "../components/pages/booking/ConfirmationPage.jsx";
+import { TicketValidationPage } from "../components/pages/booking/TicketValidationPage.jsx";
 
 // Профільні модалки
 import { ProfileSettingsModal } from "../components/layout/profile/settings/ProfileSettingsModal.jsx";
@@ -25,7 +26,6 @@ import { RatingsModal } from "../components/layout/profile/ratings/RatingsModal.
 
 // Хуки та сервіси
 import { useAuth } from "../hooks/useAuth.js";
-import { useFilters } from "../hooks/useFilters.js";
 import { movieAPI, watchlistAPI, genreAPI } from "../services/api.js";
 
 export default function App() {
@@ -61,7 +61,6 @@ export default function App() {
     const [bookingId, setBookingId] = useState(null);
 
     const { user, login, register, logout, updateUser } = useAuth();
-    const filters = useFilters();
 
     const isAnyModalOpen = !!(profileModal || openMovie || loginOpen || registerOpen);
 
@@ -104,18 +103,6 @@ export default function App() {
 
     useEffect(() => { loadInitialData(); }, [loadInitialData]);
     useEffect(() => { fetchWatchlist(); }, [fetchWatchlist]);
-
-    const filteredMovies = useMemo(() => {
-        return movies.filter(m => {
-            const matchesQuery = m.title.toLowerCase().includes(filters.query.toLowerCase());
-            const matchesRating = (m.rating || 0) >= filters.rating;
-            const matchesGenres = filters.selectedGenres.length === 0 ||
-                filters.selectedGenres.every(selectedName =>
-                    m.genres?.some(mg => mg.genre.name === selectedName)
-                );
-            return matchesQuery && matchesRating && matchesGenres;
-        });
-    }, [movies, filters.query, filters.rating, filters.selectedGenres]);
 
     const handleConfirmSeats = useCallback(async (selectedSeats) => {
         if (!user) {
@@ -179,17 +166,38 @@ export default function App() {
     };
 
     const renderPage = () => {
+        const validateIdMatch = window.location.pathname.match(/\/validate-ticket\/(\d+)/);
+
+        if (validateIdMatch) {
+            const parsedBookingId = validateIdMatch[1];
+            return <TicketValidationPage bookingId={parsedBookingId} />;
+        }
+
+        // 🔥 ВИПРАВЛЕНО: Рендеримо стани завантаження та помилки через активовані змінні loading/error
+        if (loading) {
+            return (
+                <div className="flex flex-col items-center justify-center min-h-[50vh] p-6 text-center">
+                    <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-3"></div>
+                    <p className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Завантаження даних кінотеатру...</p>
+                </div>
+            );
+        }
+
+        if (error) {
+            return (
+                <div className="flex flex-col items-center justify-center min-h-[50vh] p-6 text-center">
+                    <div className="text-red-500 bg-red-50 px-6 py-4 rounded-2xl border border-red-100 max-w-sm font-medium text-sm shadow-sm">
+                        {error}
+                    </div>
+                </div>
+            );
+        }
+
         switch (step) {
             case "home":
                 return (
                     <HomePage
-                        {...filters}
-                        movies={movies}
-                        filtered={filteredMovies}
                         genres={genres}
-                        loading={loading}
-                        error={error}
-                        onRetry={loadInitialData}
                         onOpenMovie={setOpenMovie}
                         onWatchTrailer={setOpenMovie}
                         watchlistIds={watchlistIds}

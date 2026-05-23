@@ -36,7 +36,10 @@ const swaggerOptions = {
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(null, swaggerOptions));
 
 // --- 2. НАЛАШТУВАННЯ MIDDLEWARE ---
-app.use(cors());
+app.use(cors({
+    origin: '*',
+    credentials: true
+}));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
@@ -662,6 +665,7 @@ app.get('/api/bookings/showtime/:showtimeId', bookingController.getBookingData);
 app.post('/api/bookings', authenticateToken, bookingController.createBooking);
 app.get('/api/users/my-bookings', authenticateToken, bookingController.getUserBookings);
 app.get('/api/bookings/:bookingId/pdf', authenticateToken, bookingController.downloadTicketPdf);
+app.use('/api/bookings', require('./routes/booking'));
 
 // --- 10. СЛУЖБОВІ РОУТИ ТА ОБРОБКА ПОМИЛОК ---
 
