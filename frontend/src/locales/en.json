@@ -227,5 +227,22 @@
     "currency": "UAH",
     "total": "Total paid: ",
     "qr_info": "Entrance control via QR code"
+  },
+
+  "validation": {
+    "loading": "Checking electronic ticket...",
+    "valid_title": "Access Granted",
+    "used_title": "Duplicate Pass",
+    "invalid_title": "Access Denied",
+    "film": "Movie",
+    "cinema": "Cinema",
+    "session": "Session",
+    "hall": "Hall",
+    "seats": "Seats",
+    "total_seats": "total",
+    "booking": "Booking",
+    "first_in": "First entry made at:",
+    "city_prefix": "",
+    "network_error": "Network connection error with the cinema server"
   }
 }

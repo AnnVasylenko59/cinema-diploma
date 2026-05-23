@@ -1,16 +1,20 @@
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { CheckCircle2, XCircle, AlertTriangle, Film, Calendar, MapPin, Ticket, Clock } from "lucide-react";
 import axios from "axios";
 
 export const TicketValidationPage = ({ bookingId }) => {
+    const { t, i18n } = useTranslation();
     const [status, setStatus] = useState({ loading: true, valid: null, data: null, error: null });
+
+    const currentLang = i18n.language?.startsWith("uk") ? "ua" : "en";
 
     useEffect(() => {
         const validate = async () => {
             try {
                 const currentHost = window.location.hostname;
 
-                const res = await axios.get(`http://${currentHost}:5000/api/bookings/${bookingId}/validate`);
+                const res = await axios.get(`http://${currentHost}:5000/api/bookings/${bookingId}/validate?lang=${currentLang}`);
 
                 if (res.data.valid) {
                     setStatus({ loading: false, valid: true, data: res.data, error: null });
@@ -23,29 +27,28 @@ export const TicketValidationPage = ({ bookingId }) => {
                     loading: false,
                     valid: false,
                     data: null,
-                    error: err.response?.data?.message || "Помилка мережевого з'єднання з сервером кінотеатру"
+                    error: err.response?.data?.message || t("validation.network_error")
                 });
             }
         };
         if (bookingId) validate();
-    }, [bookingId]);
+    }, [bookingId, currentLang, t]);
 
-    // Функція для гарного форматування часу сканування або сеансу
+    // Форматування часу відповідно до обраної локалі
     const formatTime = (isoString) => {
         if (!isoString) return "";
-        return new Date(isoString).toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" });
+        return new Date(isoString).toLocaleTimeString(i18n.language, { hour: "2-digit", minute: "2-digit" });
     };
 
     if (status.loading) {
         return (
             <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
                 <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                <p className="text-sm font-bold text-slate-500 uppercase tracking-wider">Перевірка електронного квитка...</p>
+                <p className="text-sm font-bold text-slate-500 uppercase tracking-wider">{t("validation.loading")}</p>
             </div>
         );
     }
 
-    // Показуємо картку з деталями, якщо вхід успішний АБО якщо квиток просто вже використаний (повторний прохід)
     const shouldShowDetails = status.valid || status.data?.alreadyUsed;
 
     return (
@@ -59,7 +62,9 @@ export const TicketValidationPage = ({ bookingId }) => {
                             <div className="p-4 bg-emerald-50 text-emerald-500 rounded-full border border-emerald-100 animate-bounce">
                                 <CheckCircle2 size={44} />
                             </div>
-                            <h2 className="text-2xl font-black text-emerald-600 uppercase tracking-tight">Вхід дозволено</h2>
+                            <h2 className="text-2xl font-black text-emerald-600 uppercase tracking-tight">
+                                {t("validation.valid_title")}
+                            </h2>
                             <p className="text-xs text-slate-400 font-medium">{status.data.message}</p>
                         </div>
                     ) : (
@@ -68,14 +73,14 @@ export const TicketValidationPage = ({ bookingId }) => {
                                 {status.data?.alreadyUsed ? <AlertTriangle size={44} /> : <XCircle size={44} />}
                             </div>
                             <h2 className={`text-2xl font-black uppercase tracking-tight ${status.data?.alreadyUsed ? "text-amber-600" : "text-red-600"}`}>
-                                {status.data?.alreadyUsed ? "Повторний прохід" : "Вхід заборонено"}
+                                {status.data?.alreadyUsed ? t("validation.used_title") : t("validation.invalid_title")}
                             </h2>
                             <p className="text-xs text-slate-500 font-semibold px-4">{status.error}</p>
                         </div>
                     )}
                 </div>
 
-                {/* Деталі квитка (Відображаються для валідних та вже використаних квитків) */}
+                {/* Деталі квитка */}
                 {shouldShowDetails && status.data && (
                     <div className="bg-slate-50/70 p-6 rounded-[1.8rem] border border-slate-100 space-y-4">
 
@@ -83,16 +88,16 @@ export const TicketValidationPage = ({ bookingId }) => {
                         <div className="flex items-start gap-3 border-b border-slate-200/50 pb-3">
                             <Film size={18} className="text-blue-500 mt-0.5 shrink-0" />
                             <div>
-                                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Фільм</div>
+                                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("validation.film")}</div>
                                 <div className="text-sm font-black text-slate-800 uppercase mt-0.5">{status.data.movieTitle}</div>
                             </div>
                         </div>
 
-                        {/* 🔥 НОВИЙ БЛОК: Час першого сканування (лише для повторного проходу) */}
+                        {/* Блок: Час першого сканування */}
                         {status.data.alreadyUsed && status.data.scannedAt && (
                             <div className="flex items-center gap-2 bg-amber-50 text-amber-800 px-4 py-2.5 rounded-2xl border border-amber-100/70 text-xs font-bold">
                                 <Clock size={16} className="text-amber-600 shrink-0" />
-                                <span>Перший вхід здійснено о: <span className="text-sm font-black text-amber-600">{formatTime(status.data.scannedAt)}</span></span>
+                                <span>{t("validation.first_in")} <span className="text-sm font-black text-amber-600">{formatTime(status.data.scannedAt)}</span></span>
                             </div>
                         )}
 
@@ -100,19 +105,19 @@ export const TicketValidationPage = ({ bookingId }) => {
                         <div className="flex items-start gap-3 border-b border-slate-200/50 pb-3">
                             <MapPin size={18} className="text-blue-500 mt-0.5 shrink-0" />
                             <div>
-                                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Кінотеатр</div>
+                                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("validation.cinema")}</div>
                                 <div className="text-xs font-bold text-slate-700 mt-0.5">
-                                    м. {status.data.cityName}, {status.data.theaterName}
+                                    {t("validation.city_prefix")}{status.data.cityName}, {status.data.theaterName}
                                 </div>
                             </div>
                         </div>
 
-                        {/* Блок Сеансу та Залу в один ряд */}
+                        {/* Блок Сеансу та Залу */}
                         <div className="grid grid-cols-2 gap-4 border-b border-slate-200/50 pb-3">
                             <div className="flex items-start gap-2.5">
                                 <Calendar size={16} className="text-blue-500 mt-0.5 shrink-0" />
                                 <div>
-                                    <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Сеанс</div>
+                                    <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{t("validation.session")}</div>
                                     <div className="text-xs font-bold text-slate-700 mt-0.5">
                                         {formatTime(status.data.startTime)}
                                     </div>
@@ -123,7 +128,7 @@ export const TicketValidationPage = ({ bookingId }) => {
                                     H
                                 </div>
                                 <div>
-                                    <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Зал</div>
+                                    <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{t("validation.hall")}</div>
                                     <div className="text-xs font-bold text-slate-700 mt-0.5">{status.data.hallName}</div>
                                 </div>
                             </div>
@@ -133,7 +138,9 @@ export const TicketValidationPage = ({ bookingId }) => {
                         <div className="flex items-start gap-3">
                             <Ticket size={18} className="text-blue-500 mt-0.5 shrink-0" />
                             <div>
-                                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Місця (всього: {status.data.ticketsCount || 1})</div>
+                                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                    {t("validation.seats")} ({t("validation.total_seats")}: {status.data.ticketsCount || 1})
+                                </div>
                                 <div className="text-xs font-bold text-slate-700 mt-1 bg-white px-3 py-1.5 rounded-xl border border-slate-150">
                                     {status.data.seats}
                                 </div>
@@ -142,10 +149,9 @@ export const TicketValidationPage = ({ bookingId }) => {
                     </div>
                 )}
 
-                {/* Підвал квитка */}
                 <div className="text-center">
                     <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">
-                        Бронювання # {bookingId}
+                        {t("validation.booking")} # {bookingId}
                     </span>
                 </div>
             </div>
