@@ -33,7 +33,6 @@ export default function App() {
     const todayStr = useMemo(() => new Date().toISOString().split("T")[0], []);
 
     // Глобальні стани інтерфейсу
-    const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
     const [step, setStep] = useState("home");
 
     // Стани для збереження вибору користувача
@@ -64,14 +63,6 @@ export default function App() {
 
     const isAnyModalOpen = !!(profileModal || openMovie || loginOpen || registerOpen);
 
-    // Теми та ефекти
-    useEffect(() => {
-        document.documentElement.className = theme;
-        localStorage.setItem('theme', theme);
-    }, [theme]);
-
-    const handleToggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
-
     const loadInitialData = useCallback(async () => {
         setLoading(true);
         setError(null);
@@ -86,7 +77,7 @@ export default function App() {
             }
         } catch {
             setError(t('errors.default_message'));
-        } finally {
+        } finally {  
             setLoading(false);
         }
     }, [t]);
@@ -232,7 +223,7 @@ export default function App() {
     };
 
     return (
-        <div className={`min-h-screen transition-colors duration-500 ${theme === 'dark' ? 'bg-slate-950 text-white' : 'bg-[#f1f5f9] text-gray-900'}`}>
+        <div className="min-h-screen bg-[#f1f5f9] text-gray-900 transition-colors duration-500">
             <div className={`sticky top-0 z-[50] ${
                 isAnyModalOpen
                     ? "blur-md opacity-40 pointer-events-none scale-[0.99] transition-all duration-500"
@@ -245,8 +236,6 @@ export default function App() {
                     onLogout={logout}
                     onOpenLoginModal={() => setLoginOpen(true)}
                     onMenuSelect={setProfileModal}
-                    theme={theme}
-                    onToggleTheme={handleToggleTheme}
                 />
             </div>
 
@@ -295,7 +284,6 @@ export default function App() {
             {profileModal === "history" && <BookingsHistoryModal open onClose={() => setProfileModal(null)} user={user} onOpenMovie={(m) => handleOpenMovieFromProfile(m, "history")} onGoHome={handleGoHome} />}
             {profileModal === "ratings" && <RatingsModal open onClose={() => setProfileModal(null)} user={user} onOpenMovie={(m) => handleOpenMovieFromProfile(m, "ratings")} onGoHome={handleGoHome} />}
 
-            {/* Рендеринг нашої нової адмін-панелі */}
             {profileModal === "admin" && (
                 <AdminModal
                     isOpen

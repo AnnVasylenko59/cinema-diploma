@@ -3,15 +3,13 @@ import { LogIn } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../ui/Atoms";
 import { LanguageToggle } from "../../ui/LanguageToggle.jsx";
-import { ThemeToggle } from "../../ui/ThemeToggle";
 import { ProfileMenu } from "../profile/ProfileMenu.jsx";
 
-export const AuthBar = ({ user, onLogout, onOpenLoginModal, onMenuSelect, theme, setTheme }) => {
+export const AuthBar = ({ user, onLogout, onOpenLoginModal, onMenuSelect }) => {
     const { t } = useTranslation();
 
     return (
         <div className="flex items-center gap-2 whitespace-nowrap">
-            <ThemeToggle theme={theme} setTheme={setTheme} />
             <LanguageToggle />
 
             <div className="h-6 w-px bg-slate-200 mx-1 hidden xs:block" />
