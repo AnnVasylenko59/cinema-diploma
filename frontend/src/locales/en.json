@@ -89,7 +89,8 @@
     "settings": "Settings",
     "favorites": "Favorites",
     "history": "Booking History",
-    "logout": "Logout"
+    "logout": "Logout",
+    "admin": "Admin Dashboard"
   },
   "filters": {
     "search_placeholder": "Search by title or director...",
@@ -246,5 +247,39 @@
     "first_in": "First entry made at:",
     "city_prefix": "",
     "network_error": "Network connection error with the cinema server"
+  },
+
+  "admin": {
+    "title": "Admin Dashboard",
+    "stats_title": "Cinema Analytics",
+    "total_revenue": "Total Revenue",
+    "tickets_sold": "Tickets Sold",
+    "occupancy_rate": "Hall Occupancy Rate",
+    "top_movies": "Top 5 Grossing Movies",
+    "add_movie": "Add New Movie",
+    "edit_movie": "Edit Movie",
+    "fields": {
+      "title_ua": "Title (UA)",
+      "title_en": "Title (EN)",
+      "description_ua": "Plot Summary (UA)",
+      "description_en": "Plot Summary (EN)",
+      "director": "Director",
+      "year": "Release Year",
+      "duration": "Duration (min)",
+      "poster": "Poster URL",
+      "backdrop": "Backdrop URL",
+      "trailer": "YouTube Trailer ID",
+      "genres": "Genres (comma separated)"
+    },
+    "buttons": {
+      "submit_create": "Create Billboard",
+      "submit_update": "Save Changes",
+      "delete": "Delete Movie"
+    },
+    "messages": {
+      "success_create": "Movie successfully added to 3NF database!",
+      "success_update": "Data and translations successfully updated.",
+      "success_delete": "Movie and all its showtimes cascade deleted."
+    }
   }
 }

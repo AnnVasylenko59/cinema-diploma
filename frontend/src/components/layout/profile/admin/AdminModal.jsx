@@ -2,16 +2,22 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
 import { X, Film, BarChart3, Plus, Trash2, Edit2, TrendingUp, DollarSign, Ticket, Clock, Undo2, Save, ArrowLeft, Calendar, ChevronDown, ChevronUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
-import axios from "axios";
+
+// Використовуємо наш локалізований інстанс з інтерцептором мови замість сирого axios
+import api, { showtimeAPI, theaterAPI} from "../../../../services/api.js";
 
 /**
  * КОМПОНЕНТ: Модальне вікно панелі адміністратора у повітряному та просторому стилі сайту.
  */
 export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefresh }) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const [activeTab, setActiveTab] = useState("movies");
     const [isDeleting, setIsDeleting] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+
+    // Визначаємо поточний мовний прапор для дат та АПІ
+    const currentLocale = i18n.language?.startsWith('en') ? 'en-US' : 'uk-UA';
+    const prismaLang = i18n.language?.startsWith('en') ? 'en' : 'uk';
 
     // Пошукові запити
     const [movieSearch, setMovieSearch] = useState("");
@@ -54,13 +60,11 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
     const deleteTimerRef = useRef(null);
     const countdownIntervalRef = useRef(null);
 
-    // Рефи та стейти для Undo (Сеанси)
     const [pendingDeleteShowtime, setPendingDeleteShowtime] = useState(null);
     const [showtimeTimeLeft, setShowtimeTimeLeft] = useState(15);
     const showtimeDeleteTimerRef = useRef(null);
     const showtimeCountdownIntervalRef = useRef(null);
 
-    // Фільтрація та мемоїзація списку фільмів із пошуком
     const displayedMovies = useMemo(() => {
         return movies
             .filter(m => m.id !== pendingDelete?.id)
@@ -71,7 +75,6 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
             });
     }, [movies, pendingDelete, movieSearch]);
 
-    // Групування сеансів
     const bundledShowtimes = useMemo(() => {
         const movieMap = {};
         const filteredShowtimes = showtimes.filter(st => {
@@ -83,7 +86,7 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
 
         filteredShowtimes.forEach((st) => {
             const movieId = st.movieId || st.movie?.id || "unknown";
-            const movieTitle = st.movie?.title || t("admin.movies.unknown", "Невідомий фільм");
+            const movieTitle = st.movie?.title || t("admin.movies.unknown", "Untitled");
             const posterUrl = st.movie?.posterUrl || "";
 
             if (!movieMap[movieId]) {
@@ -95,9 +98,9 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
             if (!movieMap[movieId].dates[dateKey]) {
                 movieMap[movieId].dates[dateKey] = {
                     dateKey,
-                    formattedDate: st.startTime ? new Date(st.startTime).toLocaleDateString("uk-UA", {
+                    formattedDate: st.startTime ? new Date(st.startTime).toLocaleDateString(currentLocale, {
                         weekday: "short", month: "long", day: "numeric"
-                    }) : t("admin.showtimes.unknown_date", "Дата не вказана"),
+                    }) : t("admin.showtimes.unknown_date", "Date not specified"),
                     items: []
                 };
             }
@@ -109,13 +112,13 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
             sortedDates.forEach(d => d.items.sort((a, b) => new Date(a.startTime) - new Date(b.startTime)));
             return { ...movie, dates: sortedDates };
         });
-    }, [showtimes, pendingDeleteShowtime, showtimeSearch, t]);
+    }, [showtimes, pendingDeleteShowtime, showtimeSearch, t, currentLocale]);
 
     const loadShowtimesData = async () => {
         try {
             const [stRes, thRes] = await Promise.all([
-                axios.get("http://localhost:5000/api/showtimes"),
-                axios.get("http://localhost:5000/api/theaters")
+                showtimeAPI.getShowtimes({ lang: prismaLang }),
+                theaterAPI.getAll({ lang: prismaLang })
             ]);
             setShowtimes(stRes.data || []);
             setTheaters(thRes.data.theaters || thRes.data || []);
@@ -127,10 +130,7 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
     const loadStatsData = async () => {
         setIsStatsLoading(true);
         try {
-            const token = localStorage.getItem('authToken');
-            const res = await axios.get("http://localhost:5000/api/movies/stats", {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await api.get(`/movies/stats?lang=${prismaLang}`);
             if (res.data) {
                 setStats({
                     revenue: res.data.revenue || 0,
@@ -151,7 +151,7 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
             if (activeTab === "showtimes") loadShowtimesData();
             if (activeTab === "stats") loadStatsData();
         }
-    }, [isOpen, activeTab]);
+    }, [isOpen, activeTab, prismaLang]); //eslint-disable-line react-hooks/exhaustive-deps
 
     const resetForm = () => {
         setFormData({
@@ -170,10 +170,7 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
     const executeRealDelete = async (movieId) => {
         setIsDeleting(true);
         try {
-            const token = localStorage.getItem('authToken');
-            await axios.delete(`http://localhost:5000/api/movies/${movieId}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.delete(`/movies/${movieId}`);
             onRefresh?.();
         } catch (error) {
             console.error(error);
@@ -208,10 +205,7 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
 
     const executeRealDeleteShowtime = async (showtimeId) => {
         try {
-            const token = localStorage.getItem('authToken');
-            await axios.delete(`http://localhost:5000/api/showtimes/${showtimeId}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.delete(`/showtimes/${showtimeId}`);
             loadShowtimesData();
         } catch (error) {
             console.error(error);
@@ -278,27 +272,23 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
     const handleSaveForm = async (e) => {
         e.preventDefault();
         if (selectedGenres.length === 0) {
-            alert(t("admin.movies.genres_empty_error", "Обов’язково оберіть хоча б один жанр для фільму!"));
+            alert(t("admin.movies.genres_empty_error", "Please select at least one genre!"));
             return;
         }
         setIsSaving(true);
         try {
-            const token = localStorage.getItem('authToken');
             const formattedData = {
                 ...formData,
                 year: formData.year ? parseInt(formData.year, 10) : undefined,
                 durationMin: formData.durationMin ? parseInt(formData.durationMin, 10) : undefined,
-                genres: selectedGenres
+                genres: selectedGenres,
+                lang: prismaLang
             };
 
             if (editingMovie) {
-                await axios.put(`http://localhost:5000/api/movies/${editingMovie.id}`, formattedData, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+                await api.put(`/movies/${editingMovie.id}`, formattedData);
             } else if (isAdding) {
-                await axios.post("http://localhost:5000/api/movies", formattedData, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+                await api.post("/movies", formattedData);
             }
             setEditingMovie(null);
             setIsAdding(false);
@@ -306,7 +296,7 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
             onRefresh?.();
         } catch (error) {
             console.error(error);
-            alert("Помилка збереження даних фільму");
+            alert("Error saving movie data");
         } finally {
             setIsSaving(false);
         }
@@ -316,7 +306,6 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
         e.preventDefault();
         setIsSaving(true);
         try {
-            const token = localStorage.getItem('authToken');
             const payload = {
                 movieId: parseInt(showtimeData.movieId, 10),
                 hallId: parseInt(showtimeData.hallId, 10),
@@ -325,20 +314,16 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
             };
 
             if (editingShowtime) {
-                await axios.put(`http://localhost:5000/api/showtimes/${editingShowtime.id}`, payload, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+                await api.put(`/showtimes/${editingShowtime.id}`, payload);
             } else {
-                await axios.post("http://localhost:5000/api/showtimes", payload, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
+                await api.post("/showtimes", payload);
             }
 
             resetShowtimeForm();
             loadShowtimesData();
         } catch (err) {
             console.error(err);
-            alert("Помилка при збереженні сеансу");
+            alert("Error saving showtime data");
         } finally {
             setIsSaving(false);
         }
@@ -380,6 +365,7 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/30 backdrop-blur-[8px]">
             <motion.div
+                key={prismaLang}
                 initial={{ opacity: 0, scale: 0.99, y: 15 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.99, y: 15 }}
@@ -391,8 +377,8 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
                     <div className="flex items-center gap-4">
                         <div className="p-3 bg-blue-50/60 text-blue-600 rounded-2xl border border-blue-100/30"><Film size={22} /></div>
                         <div>
-                            <h2 className="text-xl font-bold tracking-tight text-slate-800">{t("admin.title", "Панель адміністратора")}</h2>
-                            <p className="text-xs text-slate-400 font-normal mt-1 tracking-wide">{t("admin.subtitle", "Повний операційний контроль кіносистеми")}</p>
+                            <h2 className="text-xl font-bold tracking-tight text-slate-800">{t("admin.title")}</h2>
+                            <p className="text-xs text-slate-400 font-normal mt-1 tracking-wide">{t("header.subtitle")}</p>
                         </div>
                     </div>
                     <button onClick={handleSafeClose} className="p-2.5 text-slate-400 hover:text-slate-700 hover:bg-slate-50 rounded-xl transition-all"><X size={18} /></button>
@@ -401,9 +387,9 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
                 {/* Навігація */}
                 {!showMovieForm && !showShowtimeForm && (
                     <div className="px-12 bg-white border-b border-slate-100/60 flex gap-8 pt-3">
-                        <button onClick={() => setActiveTab("movies")} className={`flex items-center gap-2 pb-5 font-semibold text-xs tracking-wider uppercase border-b-2 transition-all duration-200 ${activeTab === "movies" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-400 hover:text-slate-600"}`}><Film size={14} /> {t("admin.tabs.movies", "Керування фільмами")}</button>
-                        <button onClick={() => setActiveTab("showtimes")} className={`flex items-center gap-2 pb-5 font-semibold text-xs tracking-wider uppercase border-b-2 transition-all duration-200 ${activeTab === "showtimes" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-400 hover:text-slate-600"}`}><Calendar size={14} /> {t("admin.tabs.showtimes", "Керування розкладом")}</button>
-                        <button onClick={() => setActiveTab("stats")} className={`flex items-center gap-2 pb-5 font-semibold text-xs tracking-wider uppercase border-b-2 transition-all duration-200 ${activeTab === "stats" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-400 hover:text-slate-600"}`}><BarChart3 size={14} /> {t("admin.tabs.stats", "Статистика та аналітика")}</button>
+                        <button onClick={() => setActiveTab("movies")} className={`flex items-center gap-2 pb-5 font-semibold text-xs tracking-wider uppercase border-b-2 transition-all duration-200 ${activeTab === "movies" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-400 hover:text-slate-600"}`}><Film size={14} /> {t("profile_menu.settings")}</button>
+                        <button onClick={() => setActiveTab("showtimes")} className={`flex items-center gap-2 pb-5 font-semibold text-xs tracking-wider uppercase border-b-2 transition-all duration-200 ${activeTab === "showtimes" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-400 hover:text-slate-600"}`}><Calendar size={14} /> {t("booking.showtime")}</button>
+                        <button onClick={() => setActiveTab("stats")} className={`flex items-center gap-2 pb-5 font-semibold text-xs tracking-wider uppercase border-b-2 transition-all duration-200 ${activeTab === "stats" ? "border-blue-600 text-blue-600" : "border-transparent text-slate-400 hover:text-slate-600"}`}><BarChart3 size={14} /> {t("admin.stats_title")}</button>
                     </div>
                 )}
 
@@ -415,76 +401,76 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
                         showMovieForm ? (
                             <form onSubmit={handleSaveForm} className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-slate-100/50 space-y-7 max-w-4xl mx-auto">
                                 <div className="flex items-center justify-between border-b border-slate-50 pb-5">
-                                    <button type="button" onClick={() => { setIsAdding(false); setEditingMovie(null); resetForm(); }} className="flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-slate-700 transition-colors"><ArrowLeft size={14} /> {t("admin.form.back", "Назад до списку")}</button>
-                                    <span className="text-xs font-bold text-blue-600 bg-blue-50/60 px-4 py-1.5 rounded-full border border-blue-100/20">{editingMovie ? "Редагування фільму" : "Створення картки фільму"}</span>
+                                    <button type="button" onClick={() => { setIsAdding(false); setEditingMovie(null); resetForm(); }} className="flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-slate-700 transition-colors"><ArrowLeft size={14} /> {t("profile.buttons.home")}</button>
+                                    <span className="text-xs font-bold text-blue-600 bg-blue-50/60 px-4 py-1.5 rounded-full border border-blue-100/20">{editingMovie ? t("admin.edit_movie") : t("admin.add_movie")}</span>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     <div className="md:col-span-2">
-                                        <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2">Назва фільму *</label>
-                                        <input required type="text" name="title" value={formData.title} onChange={handleInputChange} className="w-full px-5 py-3.5 rounded-2xl border border-slate-200/60 text-slate-800 bg-slate-50/30 focus:bg-white focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 transition-all text-sm font-medium" placeholder="Наприклад, Фантастична четвірка" />
+                                        <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2">{t("admin.fields.title_ua")} / {t("admin.fields.title_en")} *</label>
+                                        <input required type="text" name="title" value={formData.title} onChange={handleInputChange} className="w-full px-5 py-3.5 rounded-2xl border border-slate-200/60 text-slate-800 bg-slate-50/30 focus:bg-white focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 transition-all text-sm font-medium" />
                                     </div>
                                     <div>
-                                        <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2">Режисер</label>
-                                        <input type="text" name="director" value={formData.director} onChange={handleInputChange} className="w-full px-5 py-3.5 rounded-2xl border border-slate-200/60 text-slate-800 bg-slate-50/30 focus:bg-white focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 transition-all text-sm" placeholder="Метт Шекман" />
+                                        <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2">{t("admin.fields.director")}</label>
+                                        <input type="text" name="director" value={formData.director} onChange={handleInputChange} className="w-full px-5 py-3.5 rounded-2xl border border-slate-200/60 text-slate-800 bg-slate-50/30 focus:bg-white focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 transition-all text-sm" />
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                     <div>
-                                        <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2">Рік випуску *</label>
-                                        <input required type="number" name="year" value={formData.year} onChange={handleInputChange} className="w-full px-5 py-3.5 rounded-2xl border border-slate-200/60 text-slate-800 bg-slate-50/30 focus:bg-white focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 transition-all text-sm" placeholder="2025" />
+                                        <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2">{t("admin.fields.year")} *</label>
+                                        <input required type="number" name="year" value={formData.year} onChange={handleInputChange} className="w-full px-5 py-3.5 rounded-2xl border border-slate-200/60 text-slate-800 bg-slate-50/30 focus:bg-white focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 transition-all text-sm" />
                                     </div>
                                     <div>
-                                        <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2">Тривалість (хв) *</label>
-                                        <input required type="number" name="durationMin" value={formData.durationMin} onChange={handleInputChange} className="w-full px-5 py-3.5 rounded-2xl border border-slate-200/60 text-slate-800 bg-slate-50/30 focus:bg-white focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 transition-all text-sm" placeholder="140" />
+                                        <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2">{t("admin.fields.duration")} *</label>
+                                        <input required type="number" name="durationMin" value={formData.durationMin} onChange={handleInputChange} className="w-full px-5 py-3.5 rounded-2xl border border-slate-200/60 text-slate-800 bg-slate-50/30 focus:bg-white focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 transition-all text-sm" />
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2.5">Жанри (оберіть кліком) *</label>
+                                    <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2.5">{t("profile.tabs.genres")} *</label>
                                     <div className="flex flex-wrap gap-2 p-4 bg-slate-50/40 rounded-2xl border border-slate-100">
                                         {genres.map((g) => {
                                             const isSel = selectedGenres.includes(g.name);
                                             return (
-                                                <button key={g.id} type="button" onClick={() => setSelectedGenres(p => p.includes(g.name) ? p.filter(n => n !== g.name) : [...p, g.name])} className={`px-4 py-1.5 rounded-xl text-xs font-semibold transition-all border ${isSel ? "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-100/60" : "bg-white border-slate-200/60 text-slate-500 hover:border-slate-300"}`}>{g.name}</button>
+                                                <button key={g.id} type="button" onClick={() => setSelectedGenres(p => p.includes(g.name) ? p.filter(n => n !== g.name) : [...p, g.name])} className={`px-4 py-1.5 rounded-xl text-xs font-semibold transition-all border ${isSel ? "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-100/60" : "bg-white border-slate-200/60 text-slate-500 hover:border-slate-300"}`}>{t(`filters.genres.${g.name}`)}</button>
                                             );
                                         })}
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2">Опис сюжетної лінії *</label>
-                                    <textarea required rows="4" name="description" value={formData.description} onChange={handleInputChange} className="w-full px-5 py-3.5 rounded-2xl border border-slate-200/60 text-slate-800 bg-slate-50/30 focus:bg-white focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 transition-all text-sm resize-none leading-relaxed" placeholder="Короткий опис фільму..." />
+                                    <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2">{t("admin.fields.description_ua")} / {t("admin.fields.description_en")} *</label>
+                                    <textarea required rows="4" name="description" value={formData.description} onChange={handleInputChange} className="w-full px-5 py-3.5 rounded-2xl border border-slate-200/60 text-slate-800 bg-slate-50/30 focus:bg-white focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 transition-all text-sm resize-none leading-relaxed" />
                                 </div>
                                 <div className="flex justify-end gap-3 border-t border-slate-50 pt-5">
-                                    <button type="submit" disabled={isSaving} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-7 py-3 rounded-2xl text-xs font-semibold shadow-md shadow-blue-100 transition-all">{isSaving ? "Збереження..." : "Зберегти зміни"}</button>
+                                    <button type="submit" disabled={isSaving} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-7 py-3 rounded-2xl text-xs font-semibold shadow-md shadow-blue-100 transition-all">{isSaving ? t("home.updating") : t("profile.buttons.save")}</button>
                                 </div>
                             </form>
                         ) : (
                             <div className="space-y-6">
                                 <div className="flex flex-col sm:flex-row gap-4 bg-white p-5 rounded-[2rem] border border-slate-100/60 shadow-sm items-center justify-between">
-                                    <span className="text-xs font-semibold text-slate-400 pl-2">Усього в каталозі: {displayedMovies.length} фільмів</span>
+                                    <span className="text-xs font-semibold text-slate-400 pl-2">{t("home.found_count", { count: displayedMovies.length })}</span>
                                     <input
                                         type="text"
-                                        placeholder="Пошук за назвою або режисером..."
+                                        placeholder={t("filters.search_placeholder")}
                                         value={movieSearch}
                                         onChange={(e) => setMovieSearch(e.target.value)}
                                         className="px-5 py-2.5 text-xs rounded-xl border border-slate-200/60 focus:outline-none focus:border-blue-400 font-medium text-slate-700 w-full sm:max-w-xs transition-colors"
                                     />
-                                    <button onClick={() => { setIsAdding(true); resetForm(); }} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-xs font-semibold shadow-sm shrink-0 transition-all"><Plus size={14} /> Додати новий фільм</button>
+                                    <button onClick={() => { setIsAdding(true); resetForm(); }} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-xs font-semibold shadow-sm shrink-0 transition-all"><Plus size={14} /> {t("admin.add_movie")}</button>
                                 </div>
 
                                 <div className="bg-white rounded-[2.5rem] border border-slate-100/40 shadow-sm overflow-hidden">
                                     <table className="w-full text-left border-collapse">
                                         <thead>
-                                        <tr className="bg-slate-50/50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100/60"><th className="px-8 py-4.5">Фільм</th><th className="px-8 py-4.5">Жанри</th><th className="px-8 py-4.5">Тривалість</th><th className="px-8 py-4.5 text-right">Дії</th></tr>
+                                        <tr className="bg-slate-50/50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100/60"><th className="px-8 py-4.5">{t("validation.film")}</th><th className="px-8 py-4.5">{t("filters.genres_label")}</th><th className="px-8 py-4.5">{t("profile.fields.language")}</th><th className="px-8 py-4.5 text-right">Дії</th></tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-50 text-xs">
                                         {displayedMovies.map((m) => (
                                             <tr key={m.id} className="hover:bg-slate-50/20 transition-colors">
                                                 <td className="px-8 py-4 flex items-center gap-4">
                                                     <img src={m.posterUrl || "https://via.placeholder.com/40x60"} alt="" className="w-9 h-12 rounded-lg object-cover shadow-sm bg-slate-100 border border-slate-100" />
-                                                    <div><div className="font-bold text-slate-800 text-sm">{m.title}</div><div className="text-[11px] text-slate-400 font-medium mt-1">{m.director || "Режисер не вказаний"}, {m.year}</div></div>
+                                                    <div><div className="font-bold text-slate-800 text-sm">{m.title}</div><div className="text-[11px] text-slate-400 font-medium mt-1">{m.director || t("movie.unknown")}, {m.year}</div></div>
                                                 </td>
-                                                <td className="px-8 py-4"><div className="flex flex-wrap gap-1">{m.genres?.map(g => <span key={g.genre.id} className="px-2.5 py-0.5 bg-slate-100 text-slate-500 text-[10px] font-medium rounded-md">{g.genre.name}</span>)}</div></td>
-                                                <td className="px-8 py-4 text-slate-500 font-medium">{m.durationMin} хв</td>
+                                                <td className="px-8 py-4"><div className="flex flex-wrap gap-1">{m.genres?.map(g => <span key={g.genre.id} className="px-2.5 py-0.5 bg-slate-100 text-slate-500 text-[10px] font-medium rounded-md">{t(`filters.genres.${g.genre.name}`)}</span>)}</div></td>
+                                                <td className="px-8 py-4 text-slate-500 font-medium">{m.durationMin} min</td>
                                                 <td className="px-8 py-4 text-right">
                                                     <div className="flex justify-end gap-2 pr-2">
                                                         <button onClick={() => handleStartEdit(m)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50/60 rounded-xl transition-all"><Edit2 size={14} /></button>
@@ -505,14 +491,14 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
                         showShowtimeForm ? (
                             <form onSubmit={handleSaveShowtimeForm} className="bg-white p-10 rounded-[2.5rem] border border-slate-100/50 shadow-sm space-y-6 max-w-2xl mx-auto">
                                 <div className="flex items-center justify-between border-b border-slate-50 pb-5">
-                                    <button type="button" onClick={resetShowtimeForm} className="flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-slate-700 transition-colors"><ArrowLeft size={14} /> Назад</button>
+                                    <button type="button" onClick={resetShowtimeForm} className="flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-slate-700 transition-colors"><ArrowLeft size={14} /> {t("booking.back_to_sessions")}</button>
                                     <span className="text-xs font-bold text-blue-600 bg-blue-50/60 px-4 py-1.5 rounded-full border border-blue-100/20">
-                                        {editingShowtime ? "Редагування сеансу" : "Планування сеансу"}
+                                        {editingShowtime ? t("admin.edit_movie") : t("booking.title")}
                                     </span>
                                 </div>
 
                                 <div>
-                                    <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2">Фільм (не підлягає зміні при редагуванні)</label>
+                                    <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2">{t("validation.film")}</label>
                                     <select
                                         required
                                         disabled={!!editingShowtime}
@@ -520,14 +506,14 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
                                         onChange={e => setShowtimeData(p => ({ ...p, movieId: e.target.value }))}
                                         className="w-full px-5 py-3 rounded-xl border border-slate-200/70 text-slate-700 bg-slate-50/40 focus:bg-white text-xs font-medium focus:outline-none focus:border-blue-400 transition-all disabled:opacity-50 disabled:bg-slate-100/60"
                                     >
-                                        <option value="">-- Виберіть кінострічку --</option>
+                                        <option value="">-- {t("theaters.currently_selected")} --</option>
                                         {movies.map(m => <option key={m.id} value={m.id}>{m.title} ({m.year})</option>)}
                                     </select>
                                 </div>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                                     <div>
-                                        <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2">Кінотеатр</label>
+                                        <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2">{t("validation.cinema")}</label>
                                         <select
                                             required
                                             disabled={!!editingShowtime}
@@ -535,12 +521,12 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
                                             onChange={e => setShowtimeData(p => ({ ...p, theaterId: e.target.value, hallId: "" }))}
                                             className="w-full px-5 py-3 rounded-xl border border-slate-200/70 text-slate-700 bg-slate-50/40 focus:bg-white text-xs font-medium focus:outline-none focus:border-blue-400 transition-all disabled:opacity-50 disabled:bg-slate-100/60"
                                         >
-                                            <option value="">-- Оберіть локацію --</option>
+                                            <option value="">-- {t("common.select_city")} --</option>
                                             {theaters.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2">Кінозал</label>
+                                        <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2">{t("validation.hall")}</label>
                                         <select
                                             required
                                             disabled={!!editingShowtime || !showtimeData.theaterId}
@@ -548,42 +534,42 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
                                             onChange={e => setShowtimeData(p => ({ ...p, hallId: e.target.value }))}
                                             className="w-full px-5 py-3 rounded-xl border border-slate-200/70 text-slate-700 bg-slate-50/40 focus:bg-white text-xs font-medium focus:outline-none focus:border-blue-400 transition-all disabled:opacity-50 disabled:bg-slate-100/60"
                                         >
-                                            <option value="">-- Оберіть зал --</option>
-                                            {availableHalls.map(h => <option key={h.id} value={h.id}>{h.name} ({h.type || "2D/3D"})</option>)}
+                                            <option value="">-- {t("bookings.hall_placeholder")} --</option>
+                                            {availableHalls.map(h => <option key={h.id} value={h.id}>{h.name}</option>)}
                                         </select>
                                     </div>
                                 </div>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                                     <div>
-                                        <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2">Дата та Час Початку *</label>
+                                        <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2">{t("validation.session")} *</label>
                                         <input required type="datetime-local" value={showtimeData.startTime} onChange={e => setShowtimeData(p => ({ ...p, startTime: e.target.value }))} className="w-full px-5 py-3 rounded-xl border border-slate-200/70 text-slate-700 bg-slate-50/40 focus:bg-white text-xs focus:outline-none focus:border-blue-400 transition-all" />
                                     </div>
                                     <div>
-                                        <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2">Ціна квитка (₴)</label>
+                                        <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2">{t("booking.total_cost")} ({t("booking.currency")})</label>
                                         <input type="number" value={showtimeData.price} onChange={e => setShowtimeData(p => ({ ...p, price: e.target.value }))} className="w-full px-5 py-3 rounded-xl border border-slate-200/70 text-slate-700 bg-slate-50/40 focus:bg-white text-xs font-bold transition-all" />
                                     </div>
                                 </div>
                                 <div className="flex justify-end pt-5 border-t border-slate-50">
-                                    <button type="submit" disabled={isSaving} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl text-xs font-semibold shadow-sm transition-all"><Save size={14} /> {editingShowtime ? "Зберегти зміни" : "Створити сеанс"}</button>
+                                    <button type="submit" disabled={isSaving} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl text-xs font-semibold shadow-sm transition-all"><Save size={14} /> {editingShowtime ? t("profile.buttons.save") : t("booking.confirm")}</button>
                                 </div>
                             </form>
                         ) : (
                             <div className="space-y-5">
                                 <div className="flex flex-col sm:flex-row gap-4 bg-white p-5 rounded-[2rem] border border-slate-100/60 shadow-sm items-center justify-between">
-                                    <span className="text-xs font-semibold text-slate-400 pl-2">Активний розклад: {bundledShowtimes.length} фільм(ів)</span>
+                                    <span className="text-xs font-semibold text-slate-400 pl-2">{t("home.found_count", { count: bundledShowtimes.length })}</span>
                                     <input
                                         type="text"
-                                        placeholder="Шукати фільм або кінотеатр у розкладі..."
+                                        placeholder={t("filters.search_placeholder")}
                                         value={showtimeSearch}
                                         onChange={(e) => setShowtimeSearch(e.target.value)}
                                         className="px-4 py-2.5 text-xs rounded-xl border border-slate-200/80 focus:outline-none focus:border-blue-400 font-medium text-slate-700 w-full sm:max-w-xs transition-colors"
                                     />
-                                    <button onClick={() => setIsAddingShowtime(true)} className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-xs font-semibold shadow-sm shrink-0 transition-all"><Plus size={14} /> Створити новий сеанс</button>
+                                    <button onClick={() => setIsAddingShowtime(true)} className="flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-xs font-semibold shadow-sm shrink-0 transition-all"><Plus size={14} /> {t("booking.confirm")}</button>
                                 </div>
 
                                 {bundledShowtimes.length === 0 ? (
-                                    <div className="p-14 text-center text-slate-400 font-medium bg-white rounded-[2rem] border border-slate-100/60">Сеансів за вказаними критеріями не знайдено.</div>
+                                    <div className="p-14 text-center text-slate-400 font-medium bg-white rounded-[2rem] border border-slate-100/60">{t("home.not_found")}</div>
                                 ) : (
                                     <div className="space-y-4">
                                         {bundledShowtimes.map((movieGroup) => {
@@ -598,7 +584,7 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
                                                             <div>
                                                                 <h4 className="font-bold text-slate-800 text-base">{movieGroup.title}</h4>
                                                                 <span className="inline-block mt-1.5 text-[10px] font-bold text-blue-600 bg-blue-50/50 px-2.5 py-0.5 rounded-md">
-                                                                    Днів із запланованими сеансами: {movieGroup.dates.length}
+                                                                    {t("validation.seats")}: {movieGroup.dates.length}
                                                                 </span>
                                                             </div>
                                                         </div>
@@ -616,7 +602,7 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
                                                                     return (
                                                                         <div key={dateGroup.dateKey} className="space-y-2 mt-1">
                                                                             <div onClick={() => toggleDateExpand(movieGroup.movieId, dateGroup.dateKey)} className="text-[10px] font-bold uppercase text-slate-400 hover:text-slate-600 tracking-wider pl-3.5 py-2.5 flex items-center justify-between cursor-pointer select-none bg-slate-50 rounded-xl transition-colors">
-                                                                                <span>{dateGroup.formattedDate} ({dateGroup.items.length} сеанс.)</span>
+                                                                                <span>{dateGroup.formattedDate} ({dateGroup.items.length})</span>
                                                                                 <div className="pr-2 text-slate-400">{isDateExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}</div>
                                                                             </div>
 
@@ -630,13 +616,13 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
                                                                                                     <span className="text-slate-800 font-bold min-w-[140px]">{st.hall?.theater?.name}</span>
                                                                                                     <span className="px-2 py-0.5 bg-slate-100 rounded-md text-[10px] font-bold text-slate-400 uppercase tracking-wide">{st.hall?.name}</span>
                                                                                                     <span className="text-blue-600 font-bold bg-blue-50/70 px-2.5 py-0.5 rounded-md text-[11px] tracking-wide">
-                                                                                                        {st.startTime ? new Date(st.startTime).toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" }) : "--:--"}
+                                                                                                        {st.startTime ? new Date(st.startTime).toLocaleTimeString(currentLocale, { hour: "2-digit", minute: "2-digit" }) : "--:--"}
                                                                                                     </span>
                                                                                                 </div>
                                                                                                 <div className="flex items-center justify-between sm:justify-end gap-3">
-                                                                                                    <span className="text-slate-700 font-bold text-sm mr-2">{st.price || 120} ₴</span>
-                                                                                                    <button type="button" onClick={() => handleStartEditShowtime(st)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50/60 rounded-xl transition-all" title="Редагувати сеанс"><Edit2 size={13} /></button>
-                                                                                                    <button type="button" onClick={() => handleActionDeleteShowtime(st)} className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all" title="Видалити сеанс"><Trash2 size={13} /></button>
+                                                                                                    <span className="text-slate-700 font-bold text-sm mr-2">{st.price || 120} {t("booking.currency")}</span>
+                                                                                                    <button type="button" onClick={() => handleStartEditShowtime(st)} className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50/60 rounded-xl transition-all"><Edit2 size={13} /></button>
+                                                                                                    <button type="button" onClick={() => handleActionDeleteShowtime(st)} className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"><Trash2 size={13} /></button>
                                                                                                 </div>
                                                                                             </div>
                                                                                         ))}
@@ -665,21 +651,21 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
                                 <div className="bg-white p-7 rounded-[2rem] border border-slate-100/40 shadow-sm flex items-center gap-5">
                                     <div className="p-3.5 bg-emerald-50 text-emerald-500 rounded-2xl"><DollarSign size={22} /></div>
                                     <div>
-                                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Касові збори</div>
-                                        <div className="text-xl font-bold text-slate-800 mt-1">{stats.revenue.toLocaleString()} ₴</div>
+                                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("admin.total_revenue")}</div>
+                                        <div className="text-xl font-bold text-slate-800 mt-1">{stats.revenue.toLocaleString()} {t("booking.currency")}</div>
                                     </div>
                                 </div>
                                 <div className="bg-white p-7 rounded-[2rem] border border-slate-100/40 shadow-sm flex items-center gap-5">
                                     <div className="p-3.5 bg-blue-50 text-blue-600 rounded-2xl"><Ticket size={22} /></div>
                                     <div>
-                                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Продано квитків</div>
-                                        <div className="text-xl font-bold text-slate-800 mt-1">{stats.ticketsSold} од.</div>
+                                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("admin.tickets_sold")}</div>
+                                        <div className="text-xl font-bold text-slate-800 mt-1">{stats.ticketsSold}</div>
                                     </div>
                                 </div>
                                 <div className="bg-white p-7 rounded-[2rem] border border-slate-100/40 shadow-sm flex items-center gap-5">
                                     <div className="p-3.5 bg-purple-50 text-purple-500 rounded-2xl"><TrendingUp size={22} /></div>
                                     <div>
-                                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Заповнюваність залів</div>
+                                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("admin.occupancy_rate")}</div>
                                         <div className="text-xl font-bold text-slate-800 mt-1">{stats.occupancyRate}%</div>
                                     </div>
                                 </div>
@@ -688,14 +674,14 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
                             {/* Кастомний графік */}
                             <div className="bg-white p-10 rounded-[2.5rem] border border-slate-100/40 shadow-sm">
                                 <div className="mb-6">
-                                    <h3 className="font-bold text-slate-800 text-base">Касові збори за фільмами</h3>
-                                    <p className="text-xs text-slate-400 font-normal mt-1 tracking-wide">Загальна фінансова виручка від продажу квитків на кожну стрічку</p>
+                                    <h3 className="font-bold text-slate-800 text-base">{t("admin.top_movies")}</h3>
+                                    <p className="text-xs text-slate-400 font-normal mt-1 tracking-wide">{t("admin.stats_title")}</p>
                                 </div>
 
                                 {isStatsLoading ? (
-                                    <div className="text-center text-slate-400 py-14 text-xs font-medium animate-pulse">Оновлення аналітичних даних з сервера...</div>
+                                    <div className="text-center text-slate-400 py-14 text-xs font-medium animate-pulse">{t("home.updating")}</div>
                                 ) : stats.topMovies.length === 0 ? (
-                                    <div className="text-center text-slate-400 py-14 text-xs font-medium">Дані про касові збори наразі відсутні.</div>
+                                    <div className="text-center text-slate-400 py-14 text-xs font-medium">{t("home.not_found")}</div>
                                 ) : (
                                     <div className="space-y-6 w-full">
                                         {stats.topMovies.map((movie, index) => {
@@ -707,7 +693,7 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
                                                     <div className="flex justify-between text-xs font-semibold text-slate-600">
                                                         <span className="tracking-wide text-slate-700 text-sm">{movie.title}</span>
                                                         <span className="text-blue-600 font-bold bg-blue-50/50 px-3 py-1 rounded-xl">
-                                                            {currentRevenue.toLocaleString()} ₴
+                                                            {currentRevenue.toLocaleString()} {t("booking.currency")}
                                                         </span>
                                                     </div>
                                                     <div className="w-full h-4 bg-slate-50 rounded-full overflow-hidden border border-slate-100/30">
@@ -733,8 +719,8 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
                     <AnimatePresence>
                         {pendingDelete && (
                             <motion.div initial={{ opacity: 0, y: 15, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 15, scale: 0.98 }} className="bg-slate-900 text-white px-5 py-3.5 rounded-2xl shadow-xl flex items-center gap-5 border border-slate-800 justify-between">
-                                <div className="flex items-center gap-2.5"><div className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" /><span className="text-xs font-medium">Вилучено фільм <b className="text-blue-300 font-bold">«{pendingDelete.title}»</b> ({timeLeft}с)</span></div>
-                                <button type="button" onClick={handleUndo} className="flex items-center gap-1 bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all"><Undo2 size={12} /> Відновити</button>
+                                <div className="flex items-center gap-2.5"><div className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" /><span className="text-xs font-medium">Removed movie <b className="text-blue-300 font-bold">«{pendingDelete.title}»</b> ({timeLeft}s)</span></div>
+                                <button type="button" onClick={handleUndo} className="flex items-center gap-1 bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all"><Undo2 size={12} /> {t("filters.reset")}</button>
                             </motion.div>
                         )}
                     </AnimatePresence>
@@ -742,8 +728,8 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
                     <AnimatePresence>
                         {pendingDeleteShowtime && (
                             <motion.div initial={{ opacity: 0, y: 15, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 15, scale: 0.98 }} className="bg-slate-900 text-white px-5 py-3.5 rounded-2xl shadow-xl flex items-center gap-5 border border-slate-800 justify-between">
-                                <div className="flex items-center gap-2.5"><div className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" /><span className="text-xs font-medium">Вилучено сеанс фільму <b className="text-blue-300 font-bold">«{pendingDeleteShowtime.movie?.title}»</b> ({showtimeTimeLeft}с)</span></div>
-                                <button type="button" onClick={handleUndoShowtime} className="flex items-center gap-1 bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all"><Undo2 size={12} /> Відновити</button>
+                                <div className="flex items-center gap-2.5"><div className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" /><span className="text-xs font-medium">Removed showtime <b className="text-blue-300 font-bold">«{pendingDeleteShowtime.movie?.title}»</b> ({showtimeTimeLeft}s)</span></div>
+                                <button type="button" onClick={handleUndoShowtime} className="flex items-center gap-1 bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all"><Undo2 size={12} /> {t("filters.reset")}</button>
                             </motion.div>
                         )}
                     </AnimatePresence>
