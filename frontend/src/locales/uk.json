@@ -95,11 +95,10 @@
     "search_placeholder": "Пошук за назвою або режисером...",
     "genres_label": "Жанри",
     "reset": "Скинути",
-    "time_options": {
-      "any": "Будь-коли",
-      "morning": "Ранок",
-      "day": "День",
-      "evening": "Вечір"
+    "duration_options": {
+      "short": "Короткі (до 90 хв)",
+      "medium": "Середні (90 - 130 хв)",
+      "long": "Довгі (понад 130 хв)"
     },
     "genres": {
       "Комедія": "Комедія",
@@ -144,6 +143,9 @@
     "currency": "₴",
     "screen_label": "ЕКРАН",
     "download_pdf": "Квиток PDF",
+    "any_duration": "Будь-яка тривалість",
+    "no_seats_selected": "Місця не обрано",
+    "processing": "Обробка...",
     "legend": {
       "available": "Вільне",
       "selected": "Обрано",

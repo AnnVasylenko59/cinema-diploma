@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { movieAPI } from "../services/api";
 
 /**
  * @module hooks/useFilters
- * @description Клієнтська багатофакторна фільтрація каталогу фільмів без урахування рейтингів.
+ * @description Клієнтська багатофакторна фільтрація каталогу фільмів із реактивним оновленням локалі 3NF.
  */
 export const useFilters = () => {
+    const { t, i18n } = useTranslation();
     const [query, setQuery] = useState("");
     const [selectedGenres, setSelectedGenres] = useState([]);
     const [duration, setDuration] = useState("any");
@@ -18,11 +20,12 @@ export const useFilters = () => {
             try {
                 setLoading(true);
                 setError(null);
+
                 const response = await movieAPI.getAll();
                 const moviesData = response.data.movies || response.data;
                 setMovies(moviesData);
             } catch (err) {
-                setError('Помилка завантаження фільмів');
+                setError(t('errors.default_message'));
                 console.error('Error fetching movies:', err);
                 setMovies([]);
             } finally {
@@ -30,7 +33,7 @@ export const useFilters = () => {
             }
         };
         fetchMovies();
-    }, []);
+    }, [i18n.language, t]);
 
     /**
      * Препроцесинг та багатофакторна фільтрація масиву фільмів
@@ -52,7 +55,6 @@ export const useFilters = () => {
 
         // 3. Фільтрація за тривалістю
         let matchesDuration = true;
-
         const movieDurationRaw = movie.durationMin || movie.duration;
 
         if (duration !== "any" && movieDurationRaw) {

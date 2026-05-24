@@ -38,15 +38,14 @@ export const FiltersBar = ({
         }
     };
 
-    // Масив опцій для тривалості фільмів
     const durationOptions = [
-        { value: "any", label: "Будь-яка тривалість" },
-        { value: "short", label: "Короткі (до 90 хв)" },
-        { value: "medium", label: "Середні (90 - 130 хв)" },
-        { value: "long", label: "Довгі (понад 130 хв)" }
+        { value: "any", label: t('booking.any_duration') },
+        { value: "short", label: t('filters.duration_options.short') || "Короткі (до 90 хв)" },
+        { value: "medium", label: t('filters.duration_options.medium') || "Середні (90 - 130 хв)" },
+        { value: "long", label: t('filters.duration_options.long') || "Довгі (понад 130 хв)" }
     ];
 
-    const currentDurationLabel = durationOptions.find(opt => opt.value === duration)?.label || "Будь-яка тривалість";
+    const currentDurationLabel = durationOptions.find(opt => opt.value === duration)?.label || t('booking.any_duration');
 
     return (
         <div className="space-y-4">

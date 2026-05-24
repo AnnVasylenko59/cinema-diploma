@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from "react";
-import axios from "axios";
 import { Ticket, AlertTriangle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -11,18 +10,8 @@ import { LoadingState } from "../LoadingState.jsx";
 import { BookingSummary } from "./BookingSummary.jsx";
 import { ErrorState } from "../../ui/ErrorState.jsx";
 
-import { logAPI } from "../../../services/api.js";
+import api, { logAPI } from "../../../services/api.js";
 
-/**
- * Сторінка вибору місць у залі для обраного сеансу.
- * @component
- * @param {Object} props - Властивості компонента.
- * @param {Object} props.chosenShowtime - Дані обраного сеансу.
- * @param {Function} props.setStep - Функція перемикання кроків бронювання.
- * @param {Function} props.onConfirmSeats - Коллбек для підтвердження вибору місць.
- * @param {Function} props.onBookingCreated - Коллбек для передачі bookingId в батьківський компонент.
- * @returns {JSX.Element|null} Інтерфейс вибору місць або стан помилки/завантаження.
- */
 export const BookingPage = ({ chosenShowtime, setStep, onConfirmSeats, onBookingCreated }) => {
     const { t, i18n } = useTranslation();
     const [fullShowtime, setFullShowtime] = useState(null);
@@ -30,30 +19,25 @@ export const BookingPage = ({ chosenShowtime, setStep, onConfirmSeats, onBooking
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(false);
 
-    const currentLocale = i18n.language === 'en' ? 'en-US' : 'uk-UA';
+    const currentLocale = i18n.language?.startsWith('en') ? 'en-US' : 'uk-UA';
+    const prismaLang = i18n.language?.startsWith('en') ? 'en' : 'uk';
 
-    // Безпечна перевірка дати
     const isPastSession = chosenShowtime?.startTime
         ? new Date(chosenShowtime.startTime) < new Date()
         : false;
 
-    /**
-     * ### СКЛАДНИЙ АЛГОРИТМ: Синхронізація схеми зали.
-     * Завантажує актуальні дані про зайняті місця з сервера.
-     * @async
-     * @function fetchSeats
-     * @returns {Promise<void>} Оновлює локальний стан даними сеансу.
-     */
     const fetchSeats = useCallback(async () => {
         if (!chosenShowtime?.id || isPastSession) {
             setIsLoading(false);
             return;
         }
+
+        setFullShowtime(null);
         setIsLoading(true);
         setError(false);
 
         try {
-            const res = await axios.get(`http://localhost:5000/api/bookings/showtime/${chosenShowtime.id}`);
+            const res = await api.get(`/bookings/showtime/${chosenShowtime.id}?lang=${prismaLang}`);
             setFullShowtime(res.data);
         } catch (err) {
             console.error("Fetch seats error:", err);
@@ -61,45 +45,35 @@ export const BookingPage = ({ chosenShowtime, setStep, onConfirmSeats, onBooking
         } finally {
             setIsLoading(false);
         }
-    }, [chosenShowtime?.id, isPastSession]);
+    }, [chosenShowtime?.id, isPastSession, prismaLang]);
 
     useEffect(() => {
-        if (chosenShowtime?.id) fetchSeats();
-    }, [chosenShowtime?.id, fetchSeats]);
+        if (chosenShowtime?.id) {
+            fetchSeats();
+        }
+    }, [chosenShowtime?.id, prismaLang, fetchSeats]);
 
-    /**
-     * Обробник підтвердження бронювання з отриманням bookingId.
-     * @async
-     * @function handleConfirm
-     * @param {Array} seats - Вибрані місця для бронювання.
-     * @returns {Promise<void>}
-     */
     const handleConfirm = async (seats) => {
         try {
             const result = await onConfirmSeats(seats);
 
             if (result?.bookingId) {
                 localStorage.setItem('lastBookingId', result.bookingId);
-
                 if (onBookingCreated) {
                     onBookingCreated(result.bookingId);
                 }
             } else {
                 console.warn('⚠️ bookingId не отримано від сервера');
             }
-
             return result;
         } catch (error) {
             console.error('❌ Помилка при створенні бронювання:', error);
-
-            // Логування помилки
             logAPI.sendError("Помилка при створенні бронювання", {
                 page: "BookingPage",
                 showtimeId: chosenShowtime?.id,
                 seatsCount: seats?.length,
                 error: error.message
             });
-
             throw error;
         }
     };
@@ -119,39 +93,23 @@ export const BookingPage = ({ chosenShowtime, setStep, onConfirmSeats, onBooking
                 onRetry={fetchSeats}
                 onBack={() => setStep("theaters")}
                 onReport={() => {
-                    // 1. Лог у Better Stack
                     logAPI.sendError("Користувач повідомив про проблему на сторінці Бронювання", {
                         page: "BookingPage",
                         showtimeId: chosenShowtime?.id,
                         action: "User clicked report button"
                     });
 
-                    // 2. Форма Sentry
                     const eventId = Sentry.captureMessage("User Feedback: Issue on BookingPage");
-
-                    Sentry.showReportDialog({
-                        eventId,
-                        title: "Повідомити про проблему",
-                        subtitle: "Будь ласка, опишіть кроки, які призвели до цієї помилки.",
-                        subtitle2: "Це допоможе нам швидко все полагодити.",
-                        labelName: "Ваше ім'я",
-                        labelEmail: "Ваш Email",
-                        labelComments: "Що пішло не так? (Кроки відтворення)",
-                        labelSubmit: "Відправити звіт",
-                        labelClose: "Закрити",
-                        successMessage: "Дякуємо! Ваш звіт та технічні дані успішно відправлено."
-                    });
+                    Sentry.showReportDialog({ eventId });
                 }}
             />
         );
     }
 
-    if (isLoading) return <LoadingState label={t('theaters.sync')} />;
-
-    if (!fullShowtime) return null;
+    if (isLoading || !fullShowtime) return <LoadingState label={t('theaters.sync')} />;
 
     return (
-        <div className="max-w-6xl mx-auto px-4 py-2 animate-in fade-in duration-500 space-y-6">
+        <div key={prismaLang} className="max-w-6xl mx-auto px-4 py-2 animate-in fade-in duration-500 space-y-6">
             <PageHeader
                 title={fullShowtime.movie?.title}
                 subtitle={t('booking.title')}
@@ -161,7 +119,6 @@ export const BookingPage = ({ chosenShowtime, setStep, onConfirmSeats, onBooking
             />
 
             <div className="flex flex-col lg:flex-row gap-6 items-start">
-                {/* Основна зона вибору місць */}
                 <div className="flex-grow bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100 overflow-hidden">
                     <SeatPicker
                         showtime={fullShowtime}
@@ -170,14 +127,14 @@ export const BookingPage = ({ chosenShowtime, setStep, onConfirmSeats, onBooking
                     />
                 </div>
 
-                {/* Бокова панель */}
                 <BookingSummary
+                    key={prismaLang}
                     fullShowtime={fullShowtime}
                     selectedSeats={selectedSeats}
                     onConfirm={handleConfirm}
                     locale={currentLocale}
-                />
-            </div>
+                    />
+                </div>
         </div>
     );
 };

@@ -24,20 +24,30 @@ model User {
 }
 
 model Movie {
-  id          Int             @id @default(autoincrement())
+  id           Int                @id @default(autoincrement())
+  year         Int
+  durationMin  Int
+  backdropUrl  String?
+  posterUrl    String?
+  trailerUrl   String?
+  rating       Float?
+  director     String?
+  addedAt      DateTime           @default(now())
+  genres       MovieGenre[]
+  showtimes    Showtime[]
+  watchlist    WatchlistItem[]
+  translations MovieTranslation[] // Зв'язок із таблицею перекладів
+}
+
+model MovieTranslation {
+  id          Int    @id @default(autoincrement())
+  movieId     Int
+  language    String
   title       String
-  year        Int
-  durationMin Int
-  backdropUrl String?
-  posterUrl   String?
-  trailerUrl  String?
   description String
-  rating      Float?
-  director    String?
-  addedAt     DateTime        @default(now())
-  genres      MovieGenre[]
-  showtimes   Showtime[]
-  watchlist   WatchlistItem[]
+  movie       Movie  @relation(fields: [movieId], references: [id], onDelete: Cascade)
+
+  @@unique([movieId, language])
 }
 
 model Genre {
@@ -56,26 +66,46 @@ model MovieGenre {
 }
 
 model City {
-  id       Int       @id @default(autoincrement())
-  name     String    @unique
-  lat      Float
-  lng      Float
-  theaters Theater[]
+  id           Int               @id @default(autoincrement())
+  lat          Float
+  lng          Float
+  theaters     Theater[]
+  translations CityTranslation[] // Зв'язок із таблицею перекладів
 
   @@map("City")
 }
 
+model CityTranslation {
+  id       Int    @id @default(autoincrement())
+  cityId   Int
+  language String // 'uk' або 'en'
+  name     String
+  city     City   @relation(fields: [cityId], references: [id], onDelete: Cascade)
+
+  @@unique([cityId, language])
+}
+
 model Theater {
-  id      Int     @id @default(autoincrement())
-  name    String
-  cityId  Int     @map("cityId")
-  city    City    @relation(fields: [cityId], references: [id])
-  coords  String
-  address String?
-  phone   String?
-  halls   Hall[]
+  id           Int                  @id @default(autoincrement())
+  cityId       Int                  @map("cityId")
+  city         City                 @relation(fields: [cityId], references: [id])
+  coords       String
+  phone        String?
+  halls        Hall[]
+  translations TheaterTranslation[] // Зв'язок із таблицею перекладів
 
   @@map("Theater")
+}
+
+model TheaterTranslation {
+  id        Int     @id @default(autoincrement())
+  theaterId Int
+  language  String // 'uk' або 'en'
+  name      String
+  address   String?
+  theater   Theater @relation(fields: [theaterId], references: [id], onDelete: Cascade)
+
+  @@unique([theaterId, language])
 }
 
 model Hall {

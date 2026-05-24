@@ -7,8 +7,8 @@ const { LogtailTransport } = require('@logtail/winston');
 const logtail = new Logtail('rYQ4ngswKfHhu1bFpssiXB8n');
 
 const customLevels = {
-    levels: { critical: 0, error: 1, warning: 2, info: 3, debug: 4 },
-    colors: { critical: 'red', error: 'magenta', warning: 'yellow', info: 'green', debug: 'blue' }
+    levels: { critical: 0, error: 1, warn: 2, info: 3, debug: 4 },
+    colors: { critical: 'red', error: 'magenta', warn: 'yellow', info: 'green', debug: 'blue' }
 };
 
 winston.addColors(customLevels.colors);

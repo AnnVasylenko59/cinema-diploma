@@ -173,7 +173,6 @@ export default function App() {
             return <TicketValidationPage bookingId={parsedBookingId} />;
         }
 
-        // 🔥 ВИПРАВЛЕНО: Рендеримо стани завантаження та помилки через активовані змінні loading/error
         if (loading) {
             return (
                 <div className="flex flex-col items-center justify-center min-h-[50vh] p-6 text-center">

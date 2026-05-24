@@ -9,6 +9,7 @@ const { PrismaClient } = require('@prisma/client');
 const jwt = require('jsonwebtoken');
 const bookingController = require('./controllers/bookingController');
 const movieController = require('./controllers/movieController');
+const theaterController = require('./controllers/theaterController');
 const logger = require('./utils/logger');
 require('dotenv').config();
 
@@ -48,7 +49,6 @@ app.use((req, res, next) => {
     req.correlationId = correlationId;
     res.setHeader('X-Correlation-ID', correlationId);
 
-    // Засікаємо старт запиту (Інструмент CPU-профілювання)
     const start = performance.now();
 
     res.on('finish', () => {
@@ -77,7 +77,6 @@ app.use((req, res, next) => {
 app.post('/api/logs', (req, res) => {
     try {
         const { level = 'error', message, context = {} } = req.body;
-
         const userContext = req.user ? { userLogin: req.user.login, userId: req.user.userId } : { user: 'Guest' };
 
         logger.log({
@@ -100,7 +99,7 @@ app.post('/api/logs', (req, res) => {
 // --- 4. СЛУЖБОВІ ФУНКЦІЇ ТА АУТЕНТИФІКАЦІЯ ---
 
 /**
- * БІЗНЕС-ЛОГІКА: Перевірка цілісності інфраструктури (Health Check).
+ *
  */
 async function checkDatabaseConnection() {
     try {
@@ -114,20 +113,24 @@ async function checkDatabaseConnection() {
 }
 
 /**
- * МЕХАНІЗМ БЕЗПЕКИ: Валідація доступу (Guard Middleware).
+ * МЕХАНІЗМ БЕЗПЕКИ: Валідація доступу та перевірка JWT-токена (Guard Middleware).
+ * @param {Object} req - Об'єкт запиту Express.
+ * @param {Object} res - Об'єкт відповіді Express.
+ * @param {Function} next - Колбек передачі керування наступному обробнику.
+ * @returns {void}
  */
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
     if (!token) {
-        logger. warning(`Unauthorized access attempt to ${req.url} (No token)`); 
+        logger.warning(`Unauthorized access attempt to ${req.url} (No token)`);
         return res.status(401).json({ error: 'Токен відсутній' });
     }
 
     jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret-key-for-development', (err, user) => {
         if (err) {
-            logger. warning(`JWT Verification Error on ${req.url}: ${err.message}`); 
+            logger.warning(`JWT Verification Error on ${req.url}: ${err.message}`);
             return res.status(403).json({ error: 'Недійсний або прострочений токен' });
         }
         req.user = user;
@@ -135,13 +138,6 @@ const authenticateToken = (req, res, next) => {
     });
 };
 
-/**
- * МЕХАНІЗМ КОНТРОЛЮ ДОСТУПУ (RBAC): Перевірка прав адміністратора.
- * @param {Object} req - Об'єкт запиту Express.
- * @param {Object} res - Об'єкт відповіді Express.
- * @param {Function} next - Функція передачі керування наступному обробнику.
- * @returns {void}
- */
 const isAdmin = (req, res, next) => {
     if (!req.user || !req.user.isAdmin) {
         logger.warn(`Admin access denied for user: ${req.user ? req.user.login : 'Guest'}`);
@@ -165,7 +161,7 @@ app.get('/api/users/check', async (req, res) => {
 
         res.json({ available: !existingUser });
     } catch (error) {
-        logger.error(`Error in /users/check: ${error.message}`); 
+        logger.error(`Error in /users/check: ${error.message}`);
         res.status(500).json({ error: 'Помилка при перевірці доступності' });
     }
 });
@@ -180,11 +176,11 @@ app.post('/api/users/login', async (req, res) => {
         });
 
         if (!user || password !== user.password) {
-            logger. warning(`Failed login attempt for login/email: ${login}`); 
+            logger.warning(`Failed login attempt for login/email: ${login}`);
             return res.status(401).json({ success: false, error: 'Неправильний логін або пароль' });
         }
 
-        logger.info(`User logged in successfully: ${user.login}`); 
+        logger.info(`User logged in successfully: ${user.login}`);
 
         const token = jwt.sign(
             { userId: user.id, login: user.login, isAdmin: user.isAdmin },
@@ -202,7 +198,7 @@ app.post('/api/users/login', async (req, res) => {
             token
         });
     } catch (error) {
-        logger.error(`Login server error: ${error.message}`); 
+        logger.error(`Login server error: ${error.message}`);
         res.status(500).json({ success: false, error: 'Помилка сервера' });
     }
 });
@@ -212,7 +208,7 @@ app.post('/api/users/register', async (req, res) => {
         const { login, name, email, password } = req.body;
         const existingUser = await prisma.user.findFirst({ where: { OR: [{ login }, { email }] } });
         if (existingUser) {
-            logger. warning(`Registration failed: User ${login} or ${email} already exists`); 
+            logger.warning(`Registration failed: User ${login} or ${email} already exists`);
             return res.status(409).json({ success: false, error: 'Користувач вже існує' });
         }
 
@@ -220,7 +216,7 @@ app.post('/api/users/register', async (req, res) => {
             data: { login, name, email, password, isAdmin: false }
         });
 
-        logger.info(`New user registered: ${newUser.login}`); 
+        logger.info(`New user registered: ${newUser.login}`);
 
         const token = jwt.sign(
             { userId: newUser.id, login: newUser.login },
@@ -229,7 +225,7 @@ app.post('/api/users/register', async (req, res) => {
         );
         res.status(201).json({ success: true, user: newUser, token });
     } catch (error) {
-        logger.error(`Registration error: ${error.message}`); 
+        logger.error(`Registration error: ${error.message}`);
         res.status(500).json({ success: false, error: error.message });
     }
 });
@@ -245,12 +241,12 @@ app.get('/api/users/profile', authenticateToken, async (req, res) => {
             }
         });
         if (!user) {
-            logger. warning(`Profile not found for userId: ${req.user.userId}`); 
+            logger.warning(`Profile not found for userId: ${req.user.userId}`);
             return res.status(404).json({ error: 'Користувача не знайдено' });
         }
         res.json(user);
     } catch (error) {
-        logger.error(`Error fetching profile for userId ${req.user.userId}: ${error.message}`); 
+        logger.error(`Error fetching profile for userId ${req.user.userId}: ${error.message}`);
         res.status(500).json({ error: error.message });
     }
 });
@@ -267,10 +263,10 @@ app.put('/api/users/profile', authenticateToken, async (req, res) => {
                 isAdmin: true, createdAt: true
             }
         });
-        logger.info(`User profile updated: ${updatedUser.login}`); 
+        logger.info(`User profile updated: ${updatedUser.login}`);
         res.json({ success: true, user: updatedUser });
     } catch (error) {
-        logger.error(`Error updating profile for userId ${req.user.userId}: ${error.message}`); 
+        logger.error(`Error updating profile for userId ${req.user.userId}: ${error.message}`);
         res.status(500).json({ error: 'Помилка при оновленні профілю' });
     }
 });
@@ -279,17 +275,35 @@ app.put('/api/users/profile', authenticateToken, async (req, res) => {
 
 app.get('/api/watchlist', authenticateToken, async (req, res) => {
     try {
+        const rawLang = Array.isArray(req.query.lang)
+            ? req.query.lang[0]
+            : req.query.lang;
+
+        const lang = rawLang === 'en' ? 'en' : 'uk';
         const items = await prisma.watchlistItem.findMany({
             where: { userId: req.user.userId },
             include: {
                 movie: {
-                    include: { genres: { include: { genre: true } } }
+                    include: {
+                        translations: true,
+                        genres: { include: { genre: true } }
+                    }
                 }
             }
         });
-        res.json(items.map(item => item.movie));
+
+        const localizedMovies = items.map(item => {
+            const trans = item.movie.translations.find(t => t.language === lang) || item.movie.translations[0];
+            const cleanMovie = { ...item.movie };
+            cleanMovie.title = trans ? trans.title : 'Untitled';
+            cleanMovie.description = trans ? trans.description : '';
+            delete cleanMovie.translations;
+            return cleanMovie;
+        });
+
+        res.json(localizedMovies);
     } catch (error) {
-        logger.error(`Error fetching watchlist for userId ${req.user.userId}: ${error.message}`); 
+        logger.error(`Error fetching watchlist for userId ${req.user.userId}: ${error.message}`);
         res.status(500).json({ error: error.message });
     }
 });
@@ -307,17 +321,17 @@ app.post('/api/watchlist/toggle', authenticateToken, async (req, res) => {
 
         if (existing) {
             await prisma.watchlistItem.delete({ where: { id: existing.id } });
-            logger.info(`Movie ${movieId} removed from watchlist by user ${userId}`); 
+            logger.info(`Movie ${movieId} removed from watchlist by user ${userId}`);
             return res.json({ success: true, added: false });
         } else {
             await prisma.watchlistItem.create({
                 data: { userId: userId, movieId: parseInt(movieId) }
             });
-            logger.info(`Movie ${movieId} added to watchlist by user ${userId}`); 
+            logger.info(`Movie ${movieId} added to watchlist by user ${userId}`);
             return res.json({ success: true, added: true });
         }
     } catch (error) {
-        logger.error(`Error toggling watchlist for userId ${req.user.userId}: ${error.message}`); 
+        logger.error(`Error toggling watchlist for userId ${req.user.userId}: ${error.message}`);
         res.status(500).json({ error: error.message });
     }
 });
@@ -328,7 +342,12 @@ const apiCache = new Map();
 const cacheMiddleware = (durationSec) => (req, res, next) => {
     if (req.method !== 'GET') return next();
 
-    const key = req.originalUrl;
+    const rawLang = Array.isArray(req.query.lang)
+        ? req.query.lang[0]
+        : req.query.lang;
+
+    const lang = rawLang === 'en' ? 'en' : 'uk';
+    const key = `${req.originalUrl}_lang_${lang}`;
     const cachedResponse = apiCache.get(key);
 
     if (cachedResponse && cachedResponse.expiry > Date.now()) {
@@ -351,74 +370,46 @@ const cacheMiddleware = (durationSec) => (req, res, next) => {
 
 app.get('/api/movies/stats', authenticateToken, isAdmin, movieController.getMovieStats);
 
-app.get('/api/movies', cacheMiddleware(300), async (req, res) => {
-    try {
-        const movies = await prisma.movie.findMany({
-            include: { genres: { include: { genre: true } } }
-        });
-        res.json({ movies });
-    } catch (error) {
-        logger.error(`Error fetching movies: ${error.message}`);
-        res.status(500).json({ error: error.message });
-    }
-});
+app.get('/api/movies', movieController.getAllMovies);
 
 app.get('/api/movies/recommendations', authenticateToken, movieController.getRecommendedMovies);
 
-
-
 /**
- * АДМІН-ФУНКЦІЯ: Повне каскадне видалення фільму та всіх пов'язаних сеансів, квитків і броней.
+ * АДМІН-ФУНКЦІЯ: Повне каскадне видалення фільму.
  */
 app.delete('/api/movies/:id', authenticateToken, isAdmin, async (req, res) => {
     try {
         const { id } = req.params;
         const movieId = parseInt(id);
 
-        // 1. Перевіряємо чи взагалі існує такий фільм
         const movieExists = await prisma.movie.findUnique({ where: { id: movieId } });
         if (!movieExists) {
             return res.status(404).json({ error: 'Фільм не знайдено в базі даних.' });
         }
 
-        // 2. Видаляємо фільм зі списків бажаного користувачів (Watchlist)
         await prisma.watchlistItem.deleteMany({ where: { movieId } });
 
-        // 3. Знаходимо всі сеанси (Showtimes), які були створені для цього фільму
         const showtimes = await prisma.showtime.findMany({ where: { movieId } });
         const showtimeIds = showtimes.map(s => s.id);
 
         if (showtimeIds.length > 0) {
-            // 4. Знаходимо всі бронювання на ці сеанси
             const bookings = await prisma.booking.findMany({
                 where: { showtimeId: { in: showtimeIds } }
             });
             const bookingIds = bookings.map(b => b.id);
 
             if (bookingIds.length > 0) {
-                // 5. Спочатку видаляємо квитки, оскільки вони залежать від бронювань
-                await prisma.ticket.deleteMany({
-                    where: { bookingId: { in: bookingIds } }
-                });
-                // 6. Видаляємо самі бронювання
-                await prisma.booking.deleteMany({
-                    where: { showtimeId: { in: showtimeIds } }
-                });
+                await prisma.ticket.deleteMany({ where: { bookingId: { in: bookingIds } } });
+                await prisma.booking.deleteMany({ where: { showtimeId: { in: showtimeIds } } });
             }
-
-            // 7. Видаляємо сеанси фільму
             await prisma.showtime.deleteMany({ where: { movieId } });
         }
 
-        // 8. Коли база даних повністю очищена від зв'язків, видаляємо сам фільм
-        // Зв'язки в MovieGenre видаляться автоматично завдяки onDelete: Cascade у схемі Prisma
-        await prisma.movie.delete({
-            where: { id: movieId }
-        });
+        await prisma.movieTranslation.deleteMany({ where: { movieId } });
 
-        // 9. Очищаємо кеш сервера, щоб зміни миттєво з'явилися на головній сторінці
+        await prisma.movie.delete({ where: { id: movieId } });
+
         apiCache.clear();
-
         logger.info(`Movie with ID ${movieId} and all its relations successfully deleted by admin: ${req.user.login}`);
         res.json({ success: true, message: 'Фільм та всі пов’язані сеанси/квитки успішно видалено з системи.' });
     } catch (error) {
@@ -427,118 +418,12 @@ app.delete('/api/movies/:id', authenticateToken, isAdmin, async (req, res) => {
     }
 });
 
-/**
- * АДМІН-ФУНКЦІЯ: Створення нового фільму та автоматичне пов'язування з жанрами.
- */
-app.post('/api/movies', authenticateToken, isAdmin, async (req, res) => {
-    try {
-        const {
-            title, year, durationMin, backdropUrl,
-            posterUrl, trailerUrl, description, rating, director, genres
-        } = req.body;
-
-        if (!title || !year || !durationMin || !description) {
-            return res.status(400).json({ error: 'Обов’язкові поля (title, year, durationMin, description) відсутні.' });
-        }
-
-        const genreConnections = genres && Array.isArray(genres)
-            ? genres.map(genreName => ({
-                genre: {
-                    connectOrCreate: {
-                        where: { name: genreName },
-                        create: { name: genreName }
-                    }
-                }
-            }))
-            : [];
-
-        const newMovie = await prisma.movie.create({
-            data: {
-                title,
-                year: parseInt(year),
-                durationMin: parseInt(durationMin),
-                backdropUrl,
-                posterUrl,
-                trailerUrl,
-                description,
-                rating: rating ? parseFloat(rating) : null,
-                director,
-                genres: { create: genreConnections }
-            },
-            include: { genres: { include: { genre: true } } }
-        });
-
-        apiCache.clear();
-        logger.info(`New movie "${title}" created by admin: ${req.user.login}`);
-        res.status(201).json(newMovie);
-    } catch (error) {
-        logger.error(`Error creating movie: ${error.message}`);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-/**
- * АДМІН-ФУНКЦІЯ: Повне оновлення даних фільму та перезапис його жанрів.
- */
-app.put('/api/movies/:id', authenticateToken, isAdmin, async (req, res) => {
-    try {
-        const { id } = req.params;
-        const {
-            title, year, durationMin, backdropUrl,
-            posterUrl, trailerUrl, description, rating, director, genres
-        } = req.body;
-
-        const movieId = parseInt(id);
-
-        const movieExists = await prisma.movie.findUnique({ where: { id: movieId } });
-        if (!movieExists) return res.status(404).json({ error: 'Фільм не знайдено.' });
-
-        if (genres && Array.isArray(genres)) {
-            await prisma.movieGenre.deleteMany({ where: { movieId: movieId } });
-        }
-
-        const genreConnections = genres && Array.isArray(genres)
-            ? genres.map(genreName => ({
-                genre: {
-                    connectOrCreate: {
-                        where: { name: genreName },
-                        create: { name: genreName }
-                    }
-                }
-            }))
-            : undefined;
-
-        const updatedMovie = await prisma.movie.update({
-            where: { id: movieId },
-            data: {
-                title,
-                year: year ? parseInt(year) : undefined,
-                durationMin: durationMin ? parseInt(durationMin) : undefined,
-                backdropUrl,
-                posterUrl,
-                trailerUrl,
-                description,
-                rating: rating ? parseFloat(rating) : undefined,
-                director,
-                genres: genreConnections ? { create: genreConnections } : undefined
-            },
-            include: { genres: { include: { genre: true } } }
-        });
-
-        apiCache.clear();
-        logger.info(`Movie ID ${movieId} updated by admin: ${req.user.login}`);
-        res.json(updatedMovie);
-    } catch (error) {
-        logger.error(`Error updating movie ID ${req.params.id}: ${error.message}`);
-        res.status(500).json({ error: error.message });
-    }
-});
+app.post('/api/movies', authenticateToken, isAdmin, movieController.createMovie);
+app.put('/api/movies/:id', authenticateToken, isAdmin, movieController.updateMovie);
 
 app.get('/api/genres', cacheMiddleware(300), async (req, res) => {
     try {
-        const genres = await prisma.genre.findMany({
-            orderBy: { name: 'asc' }
-        });
+        const genres = await prisma.genre.findMany({ orderBy: { name: 'asc' } });
         res.json(genres);
     } catch (error) {
         logger.error(`Error fetching genres: ${error.message}`);
@@ -546,16 +431,22 @@ app.get('/api/genres', cacheMiddleware(300), async (req, res) => {
     }
 });
 
-app.get('/api/movies/:id/recommended', cacheMiddleware(300), async (req, res) => {
+app.get('/api/movies/:id', movieController.getMovieById);
+
+app.get('/api/movies/:id/recommended', async (req, res) => {
     try {
         const { id } = req.params;
+        const rawLang = Array.isArray(req.query.lang)
+            ? req.query.lang[0]
+            : req.query.lang;
+
+        const lang = rawLang === 'en' ? 'en' : 'uk';
         const currentMovie = await prisma.movie.findUnique({
             where: { id: parseInt(id) },
             include: { genres: true }
         });
 
         if (!currentMovie) {
-            logger.warning(`Recommended movies requested for unknown movie ID: ${id}`);
             return res.status(404).json({ error: 'Movie not found' });
         }
 
@@ -567,9 +458,22 @@ app.get('/api/movies/:id/recommended', cacheMiddleware(300), async (req, res) =>
                 genres: { some: { genreId: { in: genreIds } } }
             },
             take: 4,
-            include: { genres: { include: { genre: true } } }
+            include: {
+                translations: true,
+                genres: { include: { genre: true } }
+            }
         });
-        res.json(recommended);
+
+        const localizedRecs = recommended.map(m => {
+            const trans = m.translations.find(t => t.language === lang) || m.translations[0];
+            const clean = { ...m };
+            clean.title = trans ? trans.title : 'Untitled';
+            clean.description = trans ? trans.description : '';
+            delete clean.translations;
+            return clean;
+        });
+
+        res.json(localizedRecs);
     } catch (error) {
         logger.error(`Error fetching recommended movies for ID ${req.params.id}: ${error.message}`);
         res.status(500).json({ error: error.message });
@@ -577,69 +481,19 @@ app.get('/api/movies/:id/recommended', cacheMiddleware(300), async (req, res) =>
 });
 
 // --- 8. МІСТА ТА КІНОТЕАТРИ ---
-
-app.get('/api/theaters/cities', cacheMiddleware(300), async (req, res) => {
-    try {
-        const cities = await prisma.city.findMany({ orderBy: { name: 'asc' } });
-        res.json(cities);
-    } catch (error) {
-        logger.error(`Error fetching cities: ${error.message}`);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.get('/api/theaters', cacheMiddleware(300), async (req, res) => {
-    try {
-        const { cityId } = req.query;
-        const where = cityId ? { cityId: parseInt(cityId) } : {};
-        const theaters = await prisma.theater.findMany({
-            where,
-            include: { halls: true }
-        });
-        res.json({ theaters });
-    } catch (error) {
-        logger.error(`Error fetching theaters: ${error.message}`);
-        res.status(500).json({ error: error.message });
-    }
-});
+app.get('/api/theaters/cities', theaterController.getCities);
+app.get('/api/theaters', theaterController.getTheaters);
 
 // --- 9. СЕАНСИ ТА БРОНЮВАННЯ ---
+const showtimeController = require('./controllers/showtimeController.js');
+app.get('/api/showtimes', showtimeController.getShowtimes);
 
-app.get('/api/showtimes', async (req, res) => {
-    try {
-        const { movieId, date, cityId } = req.query;
-        const where = {};
-        if (movieId) where.movieId = parseInt(movieId);
-        if (cityId) where.hall = { theater: { cityId: parseInt(cityId) } };
-
-        if (date) {
-            const startOfDay = new Date(date); startOfDay.setHours(0, 0, 0, 0);
-            const endOfDay = new Date(date); endOfDay.setHours(23, 59, 59, 999);
-            where.startTime = { gte: startOfDay, lte: endOfDay };
-        }
-
-        const showtimes = await prisma.showtime.findMany({
-            where,
-            include: { movie: true, hall: { include: { theater: true } } },
-            orderBy: { startTime: 'asc' }
-        });
-        res.json(showtimes);
-    } catch (error) {
-        logger.error(`Error fetching showtimes: ${error.message}`);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-/**
- * АДМІН-ФУНКЦІЯ: Оновлення даних існуючого сеансу (час, зал, ціна)
- */
 app.put('/api/showtimes/:id', authenticateToken, isAdmin, async (req, res) => {
     try {
         const { id } = req.params;
         const { movieId, hallId, startTime, price } = req.body;
         const showtimeId = parseInt(id);
 
-        // Перевіряємо чи існує сеанс
         const showtimeExists = await prisma.showtime.findUnique({ where: { id: showtimeId } });
         if (!showtimeExists) return res.status(404).json({ error: 'Сеанс не знайдено.' });
 
@@ -675,11 +529,11 @@ app.get('/api/health', async (req, res) => {
 });
 
 app.use((req, res) => {
-    logger. warning(`404 - Route Not Found: ${req.method} ${req.url}`);
+    logger.warning(`404 - Route Not Found: ${req.method} ${req.url}`);
     res.status(404).json({ error: 'Маршрут не знайдено на сервері' });
 });
 
-app.use((err, req, res, next) => {
+app.use((err, req, res, _next) => {
     const traceId = req.correlationId || uuidv4();
 
     const errorContext = {
@@ -710,7 +564,7 @@ process.on('uncaughtException', (error) => {
     process.exit(1);
 });
 
-process.on('unhandledRejection', (reason, promise) => {
+process.on('unhandledRejection', (reason, _promise) => {
     logger.critical(`Unhandled Promise Rejection: ${reason}`, { moduleName: 'Process' });
 });
 

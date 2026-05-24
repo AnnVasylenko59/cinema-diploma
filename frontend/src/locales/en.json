@@ -95,11 +95,10 @@
     "search_placeholder": "Search by title or director...",
     "genres_label": "Genres",
     "reset": "Reset",
-    "time_options": {
-      "any": "Any time",
-      "morning": "Morning",
-      "day": "Day",
-      "evening": "Evening"
+    "duration_options": {
+      "short": "Short (under 90 min)",
+      "medium": "Medium (90 - 130 min)",
+      "long": "Long (over 130 min)"
     },
     "genres": {
       "Комедія": "Comedy",
@@ -144,6 +143,9 @@
     "currency": "₴",
     "screen_label": "SCREEN",
     "download_pdf": "Ticket PDF",
+    "any_duration": "Any duration",
+    "no_seats_selected": "No seats selected",
+    "processing": "Processing...",
     "legend": {
       "available": "Available",
       "selected": "Selected",

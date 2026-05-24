@@ -6,8 +6,10 @@ export const LanguageToggle = () => {
     const { i18n } = useTranslation();
 
     const toggleLanguage = () => {
-        const newLang = i18n.language === "uk" ? "en" : "uk";
-        i18n.changeLanguage(newLang);
+        const newLang = i18n.language?.startsWith("uk") ? "en" : "uk";
+        i18n.changeLanguage(newLang).then(() => {
+            window.dispatchEvent(new Event("languageChanged"));
+        });
     };
 
     return (
@@ -17,7 +19,8 @@ export const LanguageToggle = () => {
             className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 border border-slate-100 rounded-xl text-[11px] font-black uppercase tracking-widest text-slate-500 hover:text-blue-600 hover:border-blue-200 transition-all active:scale-95 shadow-sm"
         >
             <Globe size={13} className="text-blue-500" />
-            <span>{i18n.language === "uk" ? "EN" : "UA"}</span>
+            {/* Показуємо, на яку мову перемкнеться додаток при кліку */}
+            <span>{i18n.language?.startsWith("uk") ? "EN" : "UA"}</span>
         </button>
     );
 };

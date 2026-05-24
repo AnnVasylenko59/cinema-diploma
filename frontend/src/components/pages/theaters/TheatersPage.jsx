@@ -1,8 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import {
-    MapPin, Film, ChevronDown, Star,
-    Search
-} from "lucide-react";
+import { MapPin, Film, ChevronDown, Star, Search } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 
@@ -19,20 +16,6 @@ import { TheatersMap } from "./TheatersMap";
 
 import { showtimeAPI, theaterAPI, movieAPI, logAPI } from "../../../services/api";
 
-/**
- * Сторінка вибору кінотеатру та часу сеансу для конкретного фільму.
- * @component
- * @param {Object} props - Властивості компонента.
- * @param {Object} props.currentMovie - Об'єкт поточного обраного фільму.
- * @param {Function} props.setStep - Навігація між кроками.
- * @param {Function} props.onPickShowtime - Коллбек вибору сеансу.
- * @param {Function} props.onOpenMovie - Коллбек відкриття деталей рекомендованого фільму.
- * @param {string} props.selectedDate - Обрана дата у форматі ISO.
- * @param {Function} props.setSelectedDate - Зміна дати.
- * @param {Object} props.selectedCity - Обране місто.
- * @param {Function} props.setSelectedCity - Зміна міста.
- * @returns {JSX.Element} Сторінка з картою кінотеатрів та рекомендованими фільмами.
- */
 export const TheatersPage = ({
                                  currentMovie: propMovie,
                                  setStep,
@@ -44,7 +27,8 @@ export const TheatersPage = ({
                                  setSelectedCity
                              }) => {
     const { t, i18n } = useTranslation();
-    const currentLocale = i18n.language === 'en' ? 'en-US' : 'uk-UA';
+    const currentLocale = i18n.language?.startsWith('en') ? 'en-US' : 'uk-UA';
+    const prismaLang = i18n.language?.startsWith('en') ? 'en' : 'uk';
     const todayStr = new Date().toISOString().split("T")[0];
 
     const [viewDate, setViewDate] = useState(new Date(selectedDate));
@@ -62,16 +46,21 @@ export const TheatersPage = ({
     const calendarRef = useRef(null);
 
     /**
-     * Отримує список міст із сервера.
-     * @async
-     * @function fetchCities
-     * @returns {Promise<Object>} Обране або перше доступне місто.
+     * Отримує список міст із сервера з урахуванням активної мови.
      */
     const fetchCities = useCallback(async () => {
         try {
-            const res = await theaterAPI.getCities();
+            const res = await theaterAPI.getCities({ lang: prismaLang });
             const data = res.data.cities || res.data;
             setCities(data);
+
+            if (selectedCity) {
+                const refreshed = data.find(c => c.id === selectedCity.id);
+                if (refreshed) {
+                    setSelectedCity(refreshed);
+                    return refreshed;
+                }
+            }
             if (data.length > 0 && !selectedCity) {
                 setSelectedCity(data[0]);
                 return data[0];
@@ -81,32 +70,27 @@ export const TheatersPage = ({
             console.error("Cities load error:", e);
             throw e;
         }
-    }, [selectedCity, setSelectedCity]);
+    }, [selectedCity, setSelectedCity, prismaLang]);
 
     /**
      * Завантажує сеанси, кінотеатри та рекомендації для обраного міста.
-     * @async
-     * @function loadContent
-     * @param {Object} city - Об'єкт міста, для якого завантажується контент.
-     * @returns {Promise<void>}
      */
     const loadContent = useCallback(async (city = selectedCity) => {
-        if (!propMovie) {
+        if (!propMovie || !city) {
             setIsLoading(false);
             return;
         }
-
-        if (!city) return;
 
         try {
             const [showRes, theaterRes, recRes] = await Promise.all([
                 showtimeAPI.getShowtimes({
                     movieId: propMovie.id,
                     date: selectedDate,
-                    cityId: city.id
+                    cityId: city.id,
+                    lang: prismaLang
                 }),
-                theaterAPI.getAll({ cityId: city.id }),
-                movieAPI.getRecommended()
+                theaterAPI.getAll({ cityId: city.id, lang: prismaLang }),
+                movieAPI.getRecommended({ lang: prismaLang })
             ]);
 
             const now = new Date();
@@ -116,12 +100,13 @@ export const TheatersPage = ({
 
             setShowtimes(filteredShowtimes);
             setTheaters(theaterRes.data.theaters || theaterRes.data || []);
-            setRecommended(recRes.data || []);
+            setRecommended(recRes.data?.movies || recRes.data || []);
 
             if (filteredShowtimes.length === 0) {
                 const allFutureRes = await showtimeAPI.getShowtimes({
                     movieId: propMovie.id,
-                    cityId: city.id
+                    cityId: city.id,
+                    lang: prismaLang
                 });
 
                 const futureDates = (allFutureRes.data || [])
@@ -140,7 +125,7 @@ export const TheatersPage = ({
         } finally {
             setIsLoading(false);
         }
-    }, [propMovie, selectedDate, selectedCity]);
+    }, [propMovie, selectedDate, selectedCity, prismaLang]);
 
     const handleGoToDate = useCallback((date) => {
         const dateStr = date.toISOString().split('T')[0];
@@ -160,7 +145,7 @@ export const TheatersPage = ({
             }
         };
         init();
-    }, [fetchCities, loadContent]);
+    }, [prismaLang, fetchCities, loadContent]);
 
     useEffect(() => {
         if (!isLoading && !error) {
@@ -185,7 +170,6 @@ export const TheatersPage = ({
                 onRetry={() => window.location.reload()}
                 onBack={() => setStep("home")}
                 onReport={() => {
-                    // 1. Лог у Better Stack
                     logAPI.sendError("Користувач повідомив про проблему на сторінці Кінотеатрів", {
                         page: "TheatersPage",
                         movieId: propMovie?.id,
@@ -194,21 +178,8 @@ export const TheatersPage = ({
                         action: "User clicked report button"
                     });
 
-                    // 2. Форма Sentry
                     const eventId = Sentry.captureMessage("User Feedback: Issue on TheatersPage");
-
-                    Sentry.showReportDialog({
-                        eventId,
-                        title: "Повідомити про проблему",
-                        subtitle: "Будь ласка, опишіть кроки, які призвели до цієї помилки.",
-                        subtitle2: "Це допоможе нам швидко все полагодити.",
-                        labelName: "Ваше ім'я",
-                        labelEmail: "Ваш Email",
-                        labelComments: "Що пішло не так? (Кроки відтворення)",
-                        labelSubmit: "Відправити звіт",
-                        labelClose: "Закрити",
-                        successMessage: "Дякуємо! Ваш звіт та технічні дані успішно відправлено."
-                    });
+                    Sentry.showReportDialog({ eventId });
                 }}
             />
         );
@@ -243,6 +214,7 @@ export const TheatersPage = ({
             <div className="flex flex-wrap items-center gap-3">
                 <div className="relative">
                     <button
+                        key={prismaLang}
                         onClick={() => setIsCityOpen(!isCityOpen)}
                         className="flex items-center gap-3 bg-white px-8 py-4 rounded-[1.8rem] border border-slate-100 shadow-sm font-black text-slate-900 uppercase tracking-tighter hover:border-blue-400 active:scale-[0.98] transition-all"
                     >
@@ -285,7 +257,7 @@ export const TheatersPage = ({
             </div>
 
             <TheatersMap
-                key={`${selectedCity?.id}-${selectedDate}`}
+                key={`${selectedCity?.id}-${selectedDate}-${prismaLang}`}
                 theaters={theaters}
                 showtimes={showtimes}
                 selectedCity={selectedCity}

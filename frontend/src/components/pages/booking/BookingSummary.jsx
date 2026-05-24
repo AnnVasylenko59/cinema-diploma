@@ -3,32 +3,27 @@ import { MapPin, Clock, CheckCircle2, Loader2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 export const BookingSummary = ({ fullShowtime, selectedSeats, onConfirm, locale }) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const [isProcessing, setIsProcessing] = useState(false);
     const totalPrice = selectedSeats.length * fullShowtime.price;
 
-    /**
-     * Асинхронний обробник підтвердження бронювання.
-     * Очікує Promise від onConfirm для отримання bookingId.
-     */
     const handleConfirmClick = async () => {
         if (selectedSeats.length === 0 || isProcessing) return;
-
         try {
             setIsProcessing(true);
-            // Чекаємо результат від onConfirm (тепер це асинхронна функція)
-            const result = await onConfirm(selectedSeats);
-            console.log('✅ Бронювання створено, результат:', result);
+            await onConfirm(selectedSeats);
         } catch (error) {
             console.error('❌ Помилка бронювання:', error);
-            alert('Не вдалося створити бронювання. Спробуйте ще раз.');
+            alert(t('errors.default_message'));
         } finally {
             setIsProcessing(false);
         }
     };
 
+    const prismaLang = i18n.language?.startsWith('en') ? 'en' : 'uk';
+
     return (
-        <div className="w-full lg:w-80 flex flex-col gap-4">
+        <div key={prismaLang} className="w-full lg:w-80 flex flex-col gap-4">
             <div className="bg-white/90 backdrop-blur-xl rounded-[2.5rem] p-6 md:p-8 border border-white shadow-xl shadow-slate-200/40 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-blue-400/5 blur-[40px] rounded-full -mr-8 -mt-8 pointer-events-none" />
 
@@ -96,7 +91,7 @@ export const BookingSummary = ({ fullShowtime, selectedSeats, onConfirm, locale 
                     ) : (
                         <CheckCircle2 size={18} />
                     )}
-                    {isProcessing ? t('booking.processing') || 'Обробка...' : t('booking.confirm')}
+                    {isProcessing ? t('home.updating') : t('booking.confirm')}
                 </button>
             </div>
         </div>

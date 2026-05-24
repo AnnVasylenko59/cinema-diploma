@@ -1,30 +1,30 @@
-import express from 'express';
-import {
-    getAllMovies,
-    getMovieById,
-    createMovie,
-    updateMovie,
-    deleteMovie,
-    getRecommendedMovies,
-    getMovieStats // <-- Імпортуємо нову функцію аналітики
-} from '../controllers/movieController.js';
-import { auth, isAdmin } from '../middleware/auth.js';
-
+const express = require('express');
 const router = express.Router();
 
-// Маршрут для аналітики та статистики для адмін-панелі (ТІЛЬКИ ДЛЯ АДМІНІВ)
-router.get('/stats', auth, isAdmin, getMovieStats);
+const movieController = require('../controllers/movieController.js');
+const auth = require('../middleware/auth.js');
 
-// Маршрут для персональних рекомендацій за методом Жаккара (потрібна авторизація)
-router.get('/recommendations', auth, getRecommendedMovies);
+// Мідлвар для перевірки адміна
+const isAdmin = (req, res, next) => {
+    if (req.user && req.user.isAdmin) {
+        return next();
+    }
+    return res.status(403).json({ error: 'Доступ заборонено. Тільки для адміністраторів.' });
+};
 
-// Публічні маршрути (доступні всім користувачам)
-router.get('/', getAllMovies);
-router.get('/:id', getMovieById);
+// Маршрут для аналітики та статистики (ТІЛЬКИ ДЛЯ АДМІНІВ)
+router.get('/stats', auth, isAdmin, movieController.getMovieStats);
 
-// Адміністративні маршрути (доступні ТІЛЬКИ після auth та з правами isAdmin)
-router.post('/', auth, isAdmin, createMovie);
-router.put('/:id', auth, isAdmin, updateMovie);
-router.delete('/:id', auth, isAdmin, deleteMovie);
+// Маршрут для персональних рекомендацій за методом Жаккара
+router.get('/recommendations', auth, movieController.getRecommendedMovies);
 
-export default router;
+// Публічні маршрути (каталог та деталка фільму)
+router.get('/', movieController.getAllMovies);
+router.get('/:id', movieController.getMovieById);
+
+// Адміністративні маршрути керування афішею
+router.post('/', auth, isAdmin, movieController.createMovie);
+router.put('/:id', auth, isAdmin, movieController.updateMovie);
+router.delete('/:id', auth, isAdmin, movieController.deleteMovie);
+
+module.exports = router;
