@@ -32,11 +32,12 @@ model Movie {
   trailerUrl   String?
   rating       Float?
   director     String?
+  cast         String[]           @default([])
   addedAt      DateTime           @default(now())
   genres       MovieGenre[]
   showtimes    Showtime[]
   watchlist    WatchlistItem[]
-  translations MovieTranslation[] // Зв'язок із таблицею перекладів
+  translations MovieTranslation[]
 }
 
 model MovieTranslation {

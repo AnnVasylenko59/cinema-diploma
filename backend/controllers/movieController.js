@@ -199,7 +199,7 @@ const getMovieById = async (req, res) => {
  */
 const createMovie = async (req, res) => {
     try {
-        const { title, description, year, durationMin, backdropUrl, posterUrl, trailerUrl, director, genres } = req.body;
+        const { title, description, year, durationMin, backdropUrl, posterUrl, trailerUrl, director, cast, genres } = req.body;
 
         if (!title || !year || !durationMin || !description) {
             return res.status(400).json({ error: 'Обов’язкові поля відсутні.' });
@@ -217,6 +217,7 @@ const createMovie = async (req, res) => {
                 posterUrl,
                 trailerUrl,
                 director,
+                cast: cast || [],
                 genres: { create: genreConnections },
                 translations: {
                     create: [
@@ -243,7 +244,7 @@ const createMovie = async (req, res) => {
 const updateMovie = async (req, res) => {
     try {
         const { id } = req.params;
-        const { title, description, year, durationMin, backdropUrl, posterUrl, trailerUrl, director, genres, lang = 'uk' } = req.body;
+        const { title, description, year, durationMin, backdropUrl, posterUrl, trailerUrl, director, cast, genres, lang = 'uk' } = req.body;
         const movieId = parseInt(id);
         const prismaLang = lang === 'en' ? 'en' : 'uk';
 
@@ -275,6 +276,7 @@ const updateMovie = async (req, res) => {
                 posterUrl,
                 trailerUrl,
                 director,
+                cast: cast !== undefined ? cast : undefined,
                 genres: genreConnections ? { create: genreConnections } : undefined,
                 translations: translationUpdate
             },

@@ -3,7 +3,7 @@ const prisma = new PrismaClient();
 
 /**
  * Головна функція для наповнення бази даних початковими даними згідно з 3NF.
- * Переносить сеанси на період після 12 червня 2026 року та додає повну локалізацію (UK/EN).
+ * Переносить сеанси на період після 12 червня 2026 року та додає повну локалізацію (UK/EN) і каст.
  * @async
  * @function main
  */
@@ -62,12 +62,13 @@ async function main() {
         await prisma.genre.create({ data: { name } });
     }
 
-    // 4. СТВОРЕННЯ ФІЛЬМІВ ТА ЇХ ПЕРЕКЛАДІВ (3NF)
-    console.log('🎬 Створення списку фільмів та двомовних сюжетів...');
+    // 4. СТВОРЕННЯ ФІЛЬМІВ ТА ЇХ ПЕРЕКЛАДІВ (3NF) + CAST
+    console.log('🎬 Створення списку фільмів, касту та двомовних сюжетів...');
     const moviesList = [
         {
             year: 2025, durationMin: 180, rating: 9.0, director: 'James Cameron', basePrice: 200,
             genres: ['Фантастика', 'Пригоди'],
+            cast: ['Sam Worthington', 'Zoe Saldaña', 'Sigourney Weaver', 'Stephen Lang'],
             posterUrl: 'https://preview.redd.it/avatar-fire-and-ash-fan-poster-v0-ui6arpdp36mf1.jpeg?width=1080&crop=smart&auto=webp&s=ea7f56bb7570733369d7d91d14c1abf319015241',
             backdropUrl: 'https://multiplex.ua/images/4b/29/4b2928874bf2a3da40804e576054c0e3.jpeg',
             trailerUrl: 'https://www.youtube.com/embed/os_CcXsSHPM',
@@ -77,6 +78,7 @@ async function main() {
         {
             year: 2025, durationMin: 155, rating: 8.5, director: 'James Gunn', basePrice: 180,
             genres: ['Бойовик', 'Фантастика'],
+            cast: ['David Corenswet', 'Rachel Brosnahan', 'Nicholas Hoult', 'Isabela Merced'],
             posterUrl: 'https://preview.redd.it/superman-movies-ranked-that-ive-seen-v0-u4l02745aynf1.jpeg?width=1080&crop=smart&auto=webp&s=96c8c3d158794ea480b683ef41efe978ca4bd79c',
             backdropUrl: 'https://kg-portal.ru/img/129010/main.jpg',
             trailerUrl: 'https://www.youtube.com/embed/ALfxbq2RhXw',
@@ -86,6 +88,7 @@ async function main() {
         {
             year: 2026, durationMin: 170, rating: 9.2, director: 'Anthony Russo', basePrice: 220,
             genres: ['Бойовик', 'Фантастика'],
+            cast: ['Robert Downey Jr.', 'Pedro Pascal', 'Vanessa Kirby', 'Benedict Cumberbatch'],
             posterUrl: 'https://preview.redd.it/avengers-doomsday-poster-i-made-v0-arvjbe2exquf1.jpeg?width=1080&crop=smart&auto=webp&s=0c9da9172b3cc83cec4cf8a0b5f80ee8bf0cb48e',
             backdropUrl: 'https://itc.ua/wp-content/uploads/2025/09/mcu-problem-blogroll-1722550002367.webp',
             trailerUrl: 'https://www.youtube.com/embed/-T4aI_k5_3Y',
@@ -95,6 +98,7 @@ async function main() {
         {
             year: 2026, durationMin: 175, rating: 8.8, director: 'Matt Reeves', basePrice: 190,
             genres: ['Драма', 'Трилер'],
+            cast: ['Robert Pattinson', 'Zoë Kravitz', 'Colin Farrell', 'Andy Serkis'],
             posterUrl: 'https://preview.redd.it/my-the-batman-part-ii-teaser-poster-ft-hush-who-would-you-v0-qa7cv14c3u1e1.jpeg?width=1080&crop=smart&auto=webp&s=e380ddaf285dab38a566a81b2b5975dda8726007',
             backdropUrl: 'https://static0.srcdn.com/wordpress/wp-content/uploads/2023/12/a-split-image-of-pattinson-s-batman-in-the-batman-and-a-fan-poster-for-the-batman-2.jpg',
             trailerUrl: 'https://www.youtube.com/embed/T7_zMl_ZhdQ',
@@ -104,6 +108,7 @@ async function main() {
         {
             year: 2025, durationMin: 140, rating: 8.0, director: 'Matt Shakman', basePrice: 170,
             genres: ['Фантастика'],
+            cast: ['Pedro Pascal', 'Vanessa Kirby', 'Joseph Quinn', 'Ebon Moss-Bachrach'],
             posterUrl: 'https://cdn.planetakino.ua/562_the-fantastic-four_2025/Media/Posters/vertical/opt_003f377b-687e-4c2d-a830-0ae78f0d7c35.webp',
             backdropUrl: 'https://www.okino.ua/media/var/news/2025/05/27/the-fantastic-four-first-steps-poster-crop-1280-1747421650887.jpeg',
             trailerUrl: 'https://www.youtube.com/embed/0bI-Nd-QSm8',
@@ -113,6 +118,7 @@ async function main() {
         {
             year: 2026, durationMin: 95, rating: 8.5, director: 'Walt Dohrn', basePrice: 140,
             genres: ['Мультфільм', 'Комедія'],
+            cast: ['Mike Myers', 'Eddie Murphy', 'Cameron Diaz', 'Antonio Banderas'],
             posterUrl: 'https://upload.wikimedia.org/wikipedia/ru/thumb/4/48/Shrek_5_poster.jpg/330px-Shrek_5_poster.jpg',
             backdropUrl: 'https://www.acmodasi.com.ua/amdb/images/movie/8/1/shrek-5-2026-S13ukI.jpg',
             trailerUrl: 'https://www.youtube.com/embed/0rhcEXJ14Rg',
@@ -122,6 +128,7 @@ async function main() {
         {
             year: 2025, durationMin: 115, rating: 7.9, director: 'Danny Boyle', basePrice: 160,
             genres: ['Жахи', 'Трилер'],
+            cast: ['Cillian Murphy', 'Aaron Taylor-Johnson', 'Jodie Comer', 'Ralph Fiennes'],
             posterUrl: 'https://cdn.planetakino.ua/10187_28-years-later_2025/Media/Posters/vertical/opt_fc8ce5ad-f3c6-433f-86b6-7fa4515ec819.webp',
             backdropUrl: 'https://cdn.planetakino.ua/10187_28-years-later_2025/Media/Covers/horizontal/opt_f8681fb4-7b41-4823-9c94-46b79e55dfa9.webp',
             trailerUrl: 'https://www.youtube.com/embed/e67K9lCl8qY',
@@ -131,6 +138,7 @@ async function main() {
         {
             year: 2025, durationMin: 135, rating: 7.6, director: 'Joachim Rønning', basePrice: 175,
             genres: ['Фантастика'],
+            cast: ['Jared Leto', 'Greta Lee', 'Evan Peters', 'Jeff Bridges'],
             posterUrl: 'https://upload.wikimedia.org/wikipedia/uk/thumb/f/f3/%D0%A2%D1%80%D0%BE%D0%BD_%D0%90%D1%80%D0%B5%D1%81_2025.png/250px-%D0%A2%D1%80%D0%BE%D0%BD_%D0%90%D1%80%D0%B5%D1%81_2025.png',
             backdropUrl: 'https://media.themoviedb.org/t/p/w780/min9ZUDZbiguTiQ7yz1Hbqk78HT.jpg',
             trailerUrl: 'https://www.youtube.com/embed/fHbAkUF2ssw',
@@ -140,6 +148,7 @@ async function main() {
         {
             year: 2025, durationMin: 165, rating: 8.2, director: 'Christopher McQuarrie', basePrice: 190,
             genres: ['Бойовик', 'Пригоди'],
+            cast: ['Tom Cruise', 'Hayley Atwell', 'Ving Rhames', 'Simon Pegg'],
             posterUrl: 'https://cdn.planetakino.ua/9069_mission-impossible-the-final-reckoning_2024/Media/Posters/vertical/opt_f6b487e0-45f2-45fe-8d57-078e142c61a7.webp',
             backdropUrl: 'https://itc.ua/wp-content/uploads/2024/10/03xzkttukb-scaled.webp',
             trailerUrl: 'https://www.youtube.com/embed/qLvLGlFFkWg',
@@ -149,6 +158,7 @@ async function main() {
         {
             year: 2024, durationMin: 166, rating: 8.9, director: 'Denis Villeneuve', basePrice: 210,
             genres: ['Фантастика', 'Драма'],
+            cast: ['Timothée Chalamet', 'Zendaya', 'Rebecca Ferguson', 'Javier Bardem'],
             posterUrl: 'https://www.palladium-cinema.com.ua/storage/upload/film/dyuna-chastina-druga-dune-part-two/e460aa944b63705d3e2ebce8b9b3b8c7eb1330aa.jpg',
             backdropUrl: 'https://static.sweet.tv/images/cache/v3/movie_banner/CN_UARICZW4YAQ==/new-254335-dune-part-two_1280x720.jpg',
             trailerUrl: 'https://www.youtube.com/embed/DtR76pz517E',
@@ -168,6 +178,7 @@ async function main() {
                 trailerUrl: m.trailerUrl,
                 rating: m.rating,
                 director: m.director,
+                cast: m.cast, // <--- Ось тут масив акторів зберігається у БД
                 translations: {
                     create: [
                         { language: 'uk', title: m.uk.title, description: m.uk.description },
