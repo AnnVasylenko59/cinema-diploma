@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
-import { X, Film, BarChart3, Plus, Trash2, Edit2, TrendingUp, DollarSign, Ticket, Clock, Undo2, Save, ArrowLeft, Calendar, ChevronDown, ChevronUp } from "lucide-react";
+import { X, Film, BarChart3, Plus, Trash2, Edit2, TrendingUp, DollarSign, Ticket, Clock, Undo2, Save, ArrowLeft, Calendar, ChevronDown, ChevronUp, Users } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
 
@@ -28,8 +28,10 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
     const [isAdding, setIsAdding] = useState(false);
     const [formData, setFormData] = useState({
         title: "", year: "", durationMin: "", backdropUrl: "",
-        posterUrl: "", trailerUrl: "", description: "", director: ""
+        posterUrl: "", trailerUrl: "", description: "", director: "", actors: ""
     });
+    const [localizedTitles, setLocalizedTitles] = useState({ uk: "", en: "" });
+    const [localizedDescriptions, setLocalizedDescriptions] = useState({ uk: "", en: "" });
     const [selectedGenres, setSelectedGenres] = useState([]);
 
     // Стейти для керування розкладом сеансів (Showtimes)
@@ -71,7 +73,9 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
             .filter(m => {
                 if (!movieSearch) return true;
                 const query = movieSearch.toLowerCase();
-                return m.title?.toLowerCase().includes(query) || m.director?.toLowerCase().includes(query);
+                const titleToSearch = m.title?.toLowerCase() || "";
+                const directorToSearch = m.director?.toLowerCase() || "";
+                return titleToSearch.includes(query) || directorToSearch.includes(query);
             });
     }, [movies, pendingDelete, movieSearch]);
 
@@ -151,13 +155,15 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
             if (activeTab === "showtimes") loadShowtimesData();
             if (activeTab === "stats") loadStatsData();
         }
-    }, [isOpen, activeTab, prismaLang]); //eslint-disable-line react-hooks/exhaustive-deps
+    }, [isOpen, activeTab, prismaLang]);
 
     const resetForm = () => {
         setFormData({
             title: "", year: "", durationMin: "", backdropUrl: "",
-            posterUrl: "", trailerUrl: "", description: "", director: ""
+            posterUrl: "", trailerUrl: "", description: "", director: "", actors: ""
         });
+        setLocalizedTitles({ uk: "", en: "" });
+        setLocalizedDescriptions({ uk: "", en: "" });
         setSelectedGenres([]);
     };
 
@@ -240,11 +246,27 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
     const handleStartEdit = (movie) => {
         setEditingMovie(movie);
         setIsAdding(false);
+
         setFormData({
-            title: movie.title || "", year: movie.year || "", durationMin: movie.durationMin || "",
-            backdropUrl: movie.backdropUrl || "", posterUrl: movie.posterUrl || "", trailerUrl: movie.trailerUrl || "",
-            description: movie.description || "", director: movie.director || ""
+            title: movie.title || "",
+            year: movie.year || "",
+            durationMin: movie.durationMin || "",
+            backdropUrl: movie.backdropUrl || "",
+            posterUrl: movie.posterUrl || "",
+            trailerUrl: movie.trailerUrl || "",
+            description: movie.description || "",
+            director: movie.director || "",
+            actors: movie.actors || ""
         });
+
+        const ukTitle = movie.translations?.find(t => t.language === 'uk')?.title || movie.title || "";
+        const enTitle = movie.translations?.find(t => t.language === 'en')?.title || movie.title || "";
+        const ukDesc = movie.translations?.find(t => t.language === 'uk')?.description || movie.description || "";
+        const enDesc = movie.translations?.find(t => t.language === 'en')?.description || movie.description || "";
+
+        setLocalizedTitles({ uk: ukTitle, en: enTitle });
+        setLocalizedDescriptions({ uk: ukDesc, en: enDesc });
+
         setSelectedGenres(movie.genres ? movie.genres.map(mg => mg.genre.name) : []);
     };
 
@@ -269,6 +291,14 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
+    const handleLocalizedTitleChange = (lang, value) => {
+        setLocalizedTitles(prev => ({ ...prev, [lang]: value }));
+    };
+
+    const handleLocalizedDescriptionChange = (lang, value) => {
+        setLocalizedDescriptions(prev => ({ ...prev, [lang]: value }));
+    };
+
     const handleSaveForm = async (e) => {
         e.preventDefault();
         if (selectedGenres.length === 0) {
@@ -282,7 +312,17 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
                 year: formData.year ? parseInt(formData.year, 10) : undefined,
                 durationMin: formData.durationMin ? parseInt(formData.durationMin, 10) : undefined,
                 genres: selectedGenres,
-                lang: prismaLang
+                lang: prismaLang,
+                translations: {
+                    uk: {
+                        title: localizedTitles.uk,
+                        description: localizedDescriptions.uk
+                    },
+                    en: {
+                        title: localizedTitles.en,
+                        description: localizedDescriptions.en
+                    }
+                }
             };
 
             if (editingMovie) {
@@ -404,17 +444,41 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
                                     <button type="button" onClick={() => { setIsAdding(false); setEditingMovie(null); resetForm(); }} className="flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-slate-700 transition-colors"><ArrowLeft size={14} /> {t("profile.buttons.home")}</button>
                                     <span className="text-xs font-bold text-blue-600 bg-blue-50/60 px-4 py-1.5 rounded-full border border-blue-100/20">{editingMovie ? t("admin.edit_movie") : t("admin.add_movie")}</span>
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                    <div className="md:col-span-2">
-                                        <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2">{t("admin.fields.title_ua")} / {t("admin.fields.title_en")} *</label>
-                                        <input required type="text" name="title" value={formData.title} onChange={handleInputChange} className="w-full px-5 py-3.5 rounded-2xl border border-slate-200/60 text-slate-800 bg-slate-50/30 focus:bg-white focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 transition-all text-sm font-medium" />
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2">
+                                            {t("admin.fields.title_ua")} (Українська) *
+                                        </label>
+                                        <input
+                                            required
+                                            type="text"
+                                            value={localizedTitles.uk}
+                                            onChange={(e) => handleLocalizedTitleChange('uk', e.target.value)}
+                                            className="w-full px-5 py-3.5 rounded-2xl border border-slate-200/60 text-slate-800 bg-slate-50/30 focus:bg-white focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 transition-all text-sm font-medium"
+                                            placeholder="Введіть назву українською"
+                                        />
                                     </div>
                                     <div>
+                                        <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2">
+                                            {t("admin.fields.title_en")} (English) *
+                                        </label>
+                                        <input
+                                            required
+                                            type="text"
+                                            value={localizedTitles.en}
+                                            onChange={(e) => handleLocalizedTitleChange('en', e.target.value)}
+                                            className="w-full px-5 py-3.5 rounded-2xl border border-slate-200/60 text-slate-800 bg-slate-50/30 focus:bg-white focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 transition-all text-sm font-medium"
+                                            placeholder="Enter English title"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <div className="md:col-span-1">
                                         <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2">{t("admin.fields.director")}</label>
                                         <input type="text" name="director" value={formData.director} onChange={handleInputChange} className="w-full px-5 py-3.5 rounded-2xl border border-slate-200/60 text-slate-800 bg-slate-50/30 focus:bg-white focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 transition-all text-sm" />
                                     </div>
-                                </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                     <div>
                                         <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2">{t("admin.fields.year")} *</label>
                                         <input required type="number" name="year" value={formData.year} onChange={handleInputChange} className="w-full px-5 py-3.5 rounded-2xl border border-slate-200/60 text-slate-800 bg-slate-50/30 focus:bg-white focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 transition-all text-sm" />
@@ -424,6 +488,22 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
                                         <input required type="number" name="durationMin" value={formData.durationMin} onChange={handleInputChange} className="w-full px-5 py-3.5 rounded-2xl border border-slate-200/60 text-slate-800 bg-slate-50/30 focus:bg-white focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 transition-all text-sm" />
                                     </div>
                                 </div>
+
+                                <div>
+                                    <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2 flex items-center gap-2">
+                                        <Users size={14} /> Актори / Cast
+                                    </label>
+                                    <textarea
+                                        rows="2"
+                                        name="actors"
+                                        value={formData.actors}
+                                        onChange={handleInputChange}
+                                        className="w-full px-5 py-3.5 rounded-2xl border border-slate-200/60 text-slate-800 bg-slate-50/30 focus:bg-white focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 transition-all text-sm resize-none"
+                                        placeholder="David Corenswet, Rachel Brosnahan, Nicholas Hoult, Isabella Merced"
+                                    />
+                                    <p className="text-[10px] text-slate-400 mt-1.5">Список акторів (не залежить від мови)</p>
+                                </div>
+
                                 <div>
                                     <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2.5">{t("profile.tabs.genres")} *</label>
                                     <div className="flex flex-wrap gap-2 p-4 bg-slate-50/40 rounded-2xl border border-slate-100">
@@ -435,10 +515,16 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
                                         })}
                                     </div>
                                 </div>
+
                                 <div>
-                                    <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2">{t("admin.fields.description_ua")} / {t("admin.fields.description_en")} *</label>
-                                    <textarea required rows="4" name="description" value={formData.description} onChange={handleInputChange} className="w-full px-5 py-3.5 rounded-2xl border border-slate-200/60 text-slate-800 bg-slate-50/30 focus:bg-white focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 transition-all text-sm resize-none leading-relaxed" />
+                                    <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2">{t("admin.fields.description_ua")} (Українська) *</label>
+                                    <textarea required rows="3" value={localizedDescriptions.uk} onChange={(e) => handleLocalizedDescriptionChange('uk', e.target.value)} className="w-full px-5 py-3.5 rounded-2xl border border-slate-200/60 text-slate-800 bg-slate-50/30 focus:bg-white focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 transition-all text-sm resize-none leading-relaxed" placeholder="Опис фільму українською" />
                                 </div>
+                                <div>
+                                    <label className="block text-[11px] font-bold tracking-wider uppercase text-slate-400 mb-2">{t("admin.fields.description_en")} (English) *</label>
+                                    <textarea required rows="3" value={localizedDescriptions.en} onChange={(e) => handleLocalizedDescriptionChange('en', e.target.value)} className="w-full px-5 py-3.5 rounded-2xl border border-slate-200/60 text-slate-800 bg-slate-50/30 focus:bg-white focus:ring-4 focus:ring-blue-500/5 focus:border-blue-400 transition-all text-sm resize-none leading-relaxed" placeholder="Movie description in English" />
+                                </div>
+
                                 <div className="flex justify-end gap-3 border-t border-slate-50 pt-5">
                                     <button type="submit" disabled={isSaving} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-7 py-3 rounded-2xl text-xs font-semibold shadow-md shadow-blue-100 transition-all">{isSaving ? t("home.updating") : t("profile.buttons.save")}</button>
                                 </div>
@@ -457,19 +543,33 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
                                     <button onClick={() => { setIsAdding(true); resetForm(); }} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-xs font-semibold shadow-sm shrink-0 transition-all"><Plus size={14} /> {t("admin.add_movie")}</button>
                                 </div>
 
-                                <div className="bg-white rounded-[2.5rem] border border-slate-100/40 shadow-sm overflow-hidden">
-                                    <table className="w-full text-left border-collapse">
+                                <div className="bg-white rounded-[2.5rem] border border-slate-100/40 shadow-sm overflow-x-auto">
+                                    <table className="w-full text-left border-collapse min-w-[600px]">
                                         <thead>
-                                        <tr className="bg-slate-50/50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100/60"><th className="px-8 py-4.5">{t("validation.film")}</th><th className="px-8 py-4.5">{t("filters.genres_label")}</th><th className="px-8 py-4.5">{t("profile.fields.language")}</th><th className="px-8 py-4.5 text-right">Дії</th></tr>
+                                        <tr className="bg-slate-50/50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100/60">
+                                            <th className="px-8 py-4.5">{t("validation.film")}</th>
+                                            <th className="px-8 py-4.5">{t("filters.genres_label")}</th>
+                                            <th className="px-8 py-4.5">{t("profile.fields.language")}</th>
+                                            <th className="px-8 py-4.5 text-right">Дії</th>
+                                        </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-50 text-xs">
                                         {displayedMovies.map((m) => (
                                             <tr key={m.id} className="hover:bg-slate-50/20 transition-colors">
-                                                <td className="px-8 py-4 flex items-center gap-4">
-                                                    <img src={m.posterUrl || "https://via.placeholder.com/40x60"} alt="" className="w-9 h-12 rounded-lg object-cover shadow-sm bg-slate-100 border border-slate-100" />
-                                                    <div><div className="font-bold text-slate-800 text-sm">{m.title}</div><div className="text-[11px] text-slate-400 font-medium mt-1">{m.director || t("movie.unknown")}, {m.year}</div></div>
+                                                <td className="px-8 py-4">
+                                                    <div className="flex items-center gap-4">
+                                                        <img src={m.posterUrl || "https://via.placeholder.com/40x60"} alt="" className="w-9 h-12 rounded-lg object-cover shadow-sm bg-slate-100 border border-slate-100" />
+                                                        <div>
+                                                            <div className="font-bold text-slate-800 text-sm">{m.title}</div>
+                                                            <div className="text-[11px] text-slate-400 font-medium mt-1">{m.director || t("movie.unknown")}, {m.year}</div>
+                                                        </div>
+                                                    </div>
                                                 </td>
-                                                <td className="px-8 py-4"><div className="flex flex-wrap gap-1">{m.genres?.map(g => <span key={g.genre.id} className="px-2.5 py-0.5 bg-slate-100 text-slate-500 text-[10px] font-medium rounded-md">{t(`filters.genres.${g.genre.name}`)}</span>)}</div></td>
+                                                <td className="px-8 py-4">
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {m.genres?.map(g => <span key={g.genre.id} className="px-2.5 py-0.5 bg-slate-100 text-slate-500 text-[10px] font-medium rounded-md">{t(`filters.genres.${g.genre.name}`)}</span>)}
+                                                    </div>
+                                                </td>
                                                 <td className="px-8 py-4 text-slate-500 font-medium">{m.durationMin} min</td>
                                                 <td className="px-8 py-4 text-right">
                                                     <div className="flex justify-end gap-2 pr-2">
@@ -577,7 +677,6 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
                                             return (
                                                 <div key={movieGroup.movieId} className="bg-white rounded-[2rem] border border-slate-100/40 shadow-sm overflow-hidden transition-all">
 
-                                                    {/* Рівень 1: Фільм */}
                                                     <div onClick={() => toggleMovieExpand(movieGroup.movieId)} className="p-5 flex items-center justify-between cursor-pointer hover:bg-slate-50/20 select-none transition-colors">
                                                         <div className="flex items-center gap-4">
                                                             <img src={movieGroup.posterUrl || "https://via.placeholder.com/30x40"} alt="" className="w-8 h-11 rounded-lg object-cover border border-slate-100 bg-slate-50 shadow-sm" />
@@ -591,7 +690,6 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
                                                         <div className="text-slate-400 pr-2">{isMovieExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</div>
                                                     </div>
 
-                                                    {/* Рівень 2: Дати всередині фільму */}
                                                     <AnimatePresence initial={false}>
                                                         {isMovieExpanded && (
                                                             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="bg-slate-50/10 border-t border-slate-50 px-5 pb-5 pt-2 space-y-3">
@@ -606,7 +704,6 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
                                                                                 <div className="pr-2 text-slate-400">{isDateExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}</div>
                                                                             </div>
 
-                                                                            {/* Рівень 3: Список конкретних сеансів */}
                                                                             <AnimatePresence initial={false}>
                                                                                 {isDateExpanded && (
                                                                                     <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="bg-white rounded-xl border border-slate-100/50 divide-y divide-slate-50 overflow-hidden shadow-sm">
@@ -671,7 +768,6 @@ export const AdminModal = ({ isOpen, onClose, movies = [], genres = [], onRefres
                                 </div>
                             </div>
 
-                            {/* Кастомний графік */}
                             <div className="bg-white p-10 rounded-[2.5rem] border border-slate-100/40 shadow-sm">
                                 <div className="mb-6">
                                     <h3 className="font-bold text-slate-800 text-base">{t("admin.top_movies")}</h3>

@@ -2,13 +2,10 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 /**
- * Головна функція для наповнення бази даних початковими даними згідно з 3NF.
- * Переносить сеанси на період після 12 червня 2026 року та додає повну локалізацію (UK/EN) і каст.
- * @async
- * @function main
+ *
  */
 async function main() {
-    console.log('🌱 Початок заповнення бази даних (Локалізована 3NF схема)...');
+    console.log('🌱 Початок заповнення бази даних...');
 
     // 1. ПОВНЕ КАСКАДНЕ ОЧИЩЕННЯ
     console.log('🧹 Очищення застарілих даних...');
@@ -28,13 +25,14 @@ async function main() {
     await prisma.genre.deleteMany();
     await prisma.user.deleteMany();
 
-    // 2. СТВОРЕННЯ МІСТ ТА ЇХ ПЕРЕКЛАДІВ
-    console.log('🏙️ Створення міст та 3NF локалізацій...');
+    // 2. СТВОРЕННЯ МІСТ (реальні координати)
+    console.log('🏙️ Створення міст...');
     const cityData = [
         { lat: 50.4501, lng: 30.5234, uk: 'Київ', en: 'Kyiv' },
         { lat: 49.8397, lng: 24.0297, uk: 'Львів', en: 'Lviv' },
         { lat: 46.4825, lng: 30.7233, uk: 'Одеса', en: 'Odesa' },
-        { lat: 48.4647, lng: 35.0462, uk: 'Дніпро', en: 'Dnipro' }
+        { lat: 48.4647, lng: 35.0462, uk: 'Дніпро', en: 'Dnipro' },
+        { lat: 49.9935, lng: 36.2304, uk: 'Харків', en: 'Kharkiv' }
     ];
 
     const cities = [];
@@ -49,10 +47,9 @@ async function main() {
                         { language: 'en', name: c.en }
                     ]
                 }
-            },
-            include: { translations: true }
+            }
         });
-        cities.push(city);
+        cities.push({ ...city, ukName: c.uk, enName: c.en });
     }
 
     // 3. СТВОРЕННЯ ЖАНРІВ
@@ -62,8 +59,8 @@ async function main() {
         await prisma.genre.create({ data: { name } });
     }
 
-    // 4. СТВОРЕННЯ ФІЛЬМІВ ТА ЇХ ПЕРЕКЛАДІВ (3NF) + CAST
-    console.log('🎬 Створення списку фільмів, касту та двомовних сюжетів...');
+    // 4. ВАШІ ОРИГІНАЛЬНІ ФІЛЬМИ (10 штук, нічого не міняю)
+    console.log('🎬 Створення фільмів...');
     const moviesList = [
         {
             year: 2025, durationMin: 180, rating: 9.0, director: 'James Cameron', basePrice: 200,
@@ -178,7 +175,7 @@ async function main() {
                 trailerUrl: m.trailerUrl,
                 rating: m.rating,
                 director: m.director,
-                cast: m.cast, // <--- Ось тут масив акторів зберігається у БД
+                cast: m.cast,
                 translations: {
                     create: [
                         { language: 'uk', title: m.uk.title, description: m.uk.description },
@@ -195,56 +192,90 @@ async function main() {
         createdMovies.push({ id: movie.id, basePrice: m.basePrice });
     }
 
-    // 5. КІНОТЕАТРИ, ЗАЛИ ТА ЇХ ПЕРЕКЛАДІВ (3NF)
-    console.log('🏢 Створення кінотеатрів, залів та схем крісел...');
-    const cityHalls = {};
+    // 5. РЕАЛЬНІ КІНОТЕАТРИ З ПРАВИЛЬНИМИ КООРДИНАТАМИ
+    console.log('🏢 Створення кінотеатрів та залів...');
 
-    for (const city of cities) {
-        // Отримуємо укр назву міста для генерації назв залів
-        const ukCityName = city.translations.find(t => t.language === 'uk').name;
+    const realTheaters = [
+        // Київ
+        { city: 'Київ', name: 'Multiplex', nameEn: 'Multiplex', address: 'ТРЦ Blockbuster, Київ', addressEn: 'Blockbuster Mall, Kyiv', lat: 50.4724, lng: 30.4597, phone: '+380443334455' },
+        { city: 'Київ', name: 'Планета Кіно', nameEn: 'Planeta Kino', address: 'ТРЦ Гуллівер, Київ', addressEn: 'Gulliver Mall, Kyiv', lat: 50.4387, lng: 30.5206, phone: '+380442224466' },
+        { city: 'Київ', name: 'Кінотеатр Жовтень', nameEn: 'Zhovten Cinema', address: 'вул. Костянтинівська, 26, Київ', addressEn: '26 Kostiantynivska St, Kyiv', lat: 50.4660, lng: 30.5186, phone: '+380442234567' },
+        { city: 'Київ', name: 'IMAX', nameEn: 'IMAX', address: 'ТРЦ Ocean Plaza, Київ', addressEn: 'Ocean Plaza Mall, Kyiv', lat: 50.4190, lng: 30.5390, phone: '+380445556677' },
 
+        // Львів
+        { city: 'Львів', name: 'Multiplex', nameEn: 'Multiplex', address: 'ТРЦ King Cross Leopolis, Львів', addressEn: 'King Cross Leopolis Mall, Lviv', lat: 49.8236, lng: 24.0312, phone: '+380322334455' },
+        { city: 'Львів', name: 'Планета Кіно', nameEn: 'Planeta Kino', address: 'ТРЦ Forum Lviv, Львів', addressEn: 'Forum Lviv Mall, Lviv', lat: 49.8421, lng: 24.0264, phone: '+380322224466' },
+        { city: 'Львів', name: 'Кінопалац ім. О. Довженка', nameEn: 'Dovzhenko Cinema Palace', address: 'пр. Свободи, 36, Львів', addressEn: '36 Svobody Ave, Lviv', lat: 49.8398, lng: 24.0290, phone: '+380322345678' },
+
+        // Одеса
+        { city: 'Одеса', name: 'Multiplex', nameEn: 'Multiplex', address: 'ТРЦ City Center, Одеса', addressEn: 'City Center Mall, Odesa', lat: 46.4755, lng: 30.7267, phone: '+380482334455' },
+        { city: 'Одеса', name: 'Планета Кіно', nameEn: 'Planeta Kino', address: 'ТРЦ Рив`єра, Одеса', addressEn: 'Riviera Mall, Odesa', lat: 46.4168, lng: 30.7701, phone: '+380482224466' },
+        { city: 'Одеса', name: 'Кінотеатр Родина', nameEn: 'Rodyna Cinema', address: 'вул. Велика Арнаутська, 82, Одеса', addressEn: '82 Velyka Arnautska St, Odesa', lat: 46.4712, lng: 30.7305, phone: '+380482345678' },
+
+        // Дніпро
+        { city: 'Дніпро', name: 'Multiplex', nameEn: 'Multiplex', address: 'ТРЦ Most City, Дніпро', addressEn: 'Most City Mall, Dnipro', lat: 48.4443, lng: 35.0484, phone: '+380562334455' },
+        { city: 'Дніпро', name: 'Планета Кіно', nameEn: 'Planeta Kino', address: 'ТРЦ Пасаж, Дніпро', addressEn: 'Pasazh Mall, Dnipro', lat: 48.4600, lng: 35.0527, phone: '+380562224466' },
+        { city: 'Дніпро', name: 'Кінозал Правда', nameEn: 'Pravda Cinema', address: 'вул. Воскресенська, 23, Дніпро', addressEn: '23 Voskresenska St, Dnipro', lat: 48.4560, lng: 35.0450, phone: '+380562345678' },
+
+        // Харків
+        { city: 'Харків', name: 'Multiplex', nameEn: 'Multiplex', address: 'ТРЦ Karavan, Харків', addressEn: 'Karavan Mall, Kharkiv', lat: 49.9845, lng: 36.2538, phone: '+380572334455' },
+        { city: 'Харків', name: 'Планета Кіно', nameEn: 'Planeta Kino', address: 'ТРЦ Французький бульвар, Харків', addressEn: 'French Boulevard Mall, Kharkiv', lat: 50.0230, lng: 36.2530, phone: '+380572224466' },
+        { city: 'Харків', name: 'Кінотеатр Боммер', nameEn: 'Bommer Cinema', address: 'вул. Сумська, 23, Харків', addressEn: '23 Sumska St, Kharkiv', lat: 50.0047, lng: 36.2340, phone: '+380572345678' }
+    ];
+
+    const allHalls = [];
+
+    for (const theaterData of realTheaters) {
+        const city = cities.find(c => c.ukName === theaterData.city);
+        if (!city) continue;
+
+        // Створюємо 3-4 зали для кожного кінотеатру
+        const hallsCount = 4;
         const hallsData = [];
-        for (let h = 0; h < 2; h++) {
-            const hallName = (ukCityName === 'Дніпро' && h === 0) ? 'Самарська долина' : `Зал ${h + 1}`;
+
+        for (let h = 0; h < hallsCount; h++) {
+            const seatsCount = 80 + (h * 10);
+            const vipSeatsCount = Math.floor(seatsCount * 0.1);
+
             hallsData.push({
-                name: hallName,
-                totalSeats: 80,
+                name: `${h === 0 ? 'VIP ' : ''}Зал ${h + 1}`,
+                totalSeats: seatsCount,
                 seats: {
-                    create: Array.from({ length: 80 }, (_, i) => ({
-                        rowNum: Math.floor(i / 10) + 1,
-                        seatNum: (i % 10) + 1,
-                        type: i < 20 ? 'vip' : 'standard'
+                    create: Array.from({ length: seatsCount }, (_, idx) => ({
+                        rowNum: Math.floor(idx / 12) + 1,
+                        seatNum: (idx % 12) + 1,
+                        type: idx < vipSeatsCount ? 'vip' : 'standard'
                     }))
                 }
             });
         }
 
-        // Обробка адрес для міст
-        let ukAddress = 'Центральна площа, 1';
-        let enAddress = '1 Central Square';
-        if (ukCityName === 'Дніпро') {
-            ukAddress = 'вул. Самарська, 12';
-            enAddress = '12 Samarska Str.';
-        }
-
         const theater = await prisma.theater.create({
             data: {
                 cityId: city.id,
-                coords: `${city.lat},${city.lng}`,
-                phone: '+380501234567',
+                coords: `${theaterData.lat},${theaterData.lng}`,
+                phone: theaterData.phone,
                 translations: {
                     create: [
-                        { language: 'uk', name: `Сінема Сіті ${ukCityName}`, address: ukAddress },
-                        { language: 'en', name: `Cinema City ${city.translations.find(t => t.language === 'en').name}`, address: `${enAddress}, ${city.translations.find(t => t.language === 'en').name}` }
+                        { language: 'uk', name: theaterData.name, address: theaterData.address },
+                        { language: 'en', name: theaterData.nameEn, address: theaterData.addressEn }
                     ]
                 },
                 halls: { create: hallsData }
-            },
+            }
+        });
+
+        const theaterWithHalls = await prisma.theater.findUnique({
+            where: { id: theater.id },
             include: { halls: true }
         });
 
-        cityHalls[ukCityName] = theater.halls;
+        if (theaterWithHalls && theaterWithHalls.halls) {
+            allHalls.push(...theaterWithHalls.halls);
+        }
     }
+
+    console.log(`✅ Створено кінотеатрів: ${realTheaters.length}, залів: ${allHalls.length}`);
 
     // 6. КОРИСТУВАЧІ
     console.log('👥 Створення тестових користувачів...');
@@ -255,64 +286,47 @@ async function main() {
         data: { login: 'ann', name: 'Анна', email: 'ann@gmail.com', password: 'Qwerty123', isAdmin: false }
     });
 
-    // 7. СЕАНСИ ДЛЯ ВСІХ ФІЛЬМІВ ПІСЛЯ 12 ЧЕРВНЯ (13 - 22 ЧЕРВНЯ 2026 РОКУ)
-    console.log('🎟️ Створення сеансів на дати після 12 червня 2026 року...');
+    // 7. СЕАНСИ (багато!)
+    console.log('🎟️ Створення сеансів...');
 
     const timeSlots = [
-        { hour: 10, minute: 0, label: 'ранковий' },
-        { hour: 12, minute: 30, label: 'денний' },
-        { hour: 15, minute: 0, label: 'післяобідній' },
-        { hour: 17, minute: 30, label: 'вечірній' },
-        { hour: 20, minute: 0, label: 'пізній' }
+        { hour: 10, minute: 0, modifier: 0.8 },
+        { hour: 12, minute: 30, modifier: 0.9 },
+        { hour: 15, minute: 0, modifier: 1.0 },
+        { hour: 17, minute: 30, modifier: 1.1 },
+        { hour: 20, minute: 0, modifier: 1.2 },
+        { hour: 22, minute: 30, modifier: 1.3 }
     ];
 
-    const priceModifiers = {
-        'ранковий': 0.8, 'денний': 0.9, 'післяобідній': 1.0, 'вечірній': 1.1, 'пізній': 1.2
-    };
-
-    const cityNames = ['Київ', 'Львів', 'Одеса', 'Дніпро'];
     let totalShowtimes = 0;
 
-    for (let dayOffset = 13; dayOffset <= 22; dayOffset++) {
-        for (let movieIndex = 0; movieIndex < createdMovies.length; movieIndex++) {
-            const movie = createdMovies[movieIndex];
-            if (!movie) continue;
+    // Дати: 13-30 червня 2026
+    for (let dayOffset = 13; dayOffset <= 30; dayOffset++) {
+        const isWeekend = [13, 14, 20, 21, 27, 28].includes(dayOffset);
+        const weekendModifier = isWeekend ? 1.15 : 1.0;
 
-            const sessionsPerDay = 2 + (movieIndex % 2);
+        for (const movie of createdMovies) {
+            // Кількість сеансів на день для кожного фільму: 2-4
+            const sessionsPerDay = 2 + (movie.id % 3);
 
             for (let s = 0; s < sessionsPerDay; s++) {
-                const slotIndex = (movieIndex + s + dayOffset) % timeSlots.length;
+                const slotIndex = (movie.id + s + dayOffset) % timeSlots.length;
                 const slot = timeSlots[slotIndex];
-                if (!slot) continue;
 
-                const cityIndex = (movieIndex + dayOffset + s) % cityNames.length;
-                const cityName = cityNames[cityIndex];
-                if (!cityName || !cityHalls[cityName]) continue;
-
-                const cityHallList = cityHalls[cityName];
-                if (!cityHallList || cityHallList.length === 0) continue;
-
-                const hall = cityHallList[s % cityHallList.length];
-                if (!hall) continue;
+                const randomHall = allHalls[Math.floor(Math.random() * allHalls.length)];
+                if (!randomHall) continue;
 
                 const basePrice = movie.basePrice;
-                const modifier = priceModifiers[slot.label];
+                const finalPrice = Math.round(basePrice * slot.modifier * weekendModifier / 10) * 10;
 
-                // Перевірка на вихідні (13, 14 червня та 20, 21 червня — це Сб/Нд у 2026 році)
-                const isWeekend = (dayOffset === 13 || dayOffset === 14 || dayOffset === 20 || dayOffset === 21);
-                const weekendModifier = isWeekend ? 1.15 : 1.0;
-
-                const price = Math.round(basePrice * modifier * weekendModifier / 10) * 10;
-
-                // Створюємо дату (5 = червень у JS Date Object)
                 const date = new Date(2026, 5, dayOffset, slot.hour, slot.minute, 0);
 
                 await prisma.showtime.create({
                     data: {
                         startTime: date,
-                        price: price,
+                        price: finalPrice,
                         movieId: movie.id,
-                        hallId: hall.id
+                        hallId: randomHall.id
                     }
                 });
 
@@ -321,18 +335,21 @@ async function main() {
         }
     }
 
-    console.log('\n🚀 Звіт виконання сид-скрипту:');
+    console.log('\n🚀 ЗВІТ ПРО НАПОВНЕННЯ:');
     console.log('=========================================');
-    console.log(`✅ Успішно згенеровано ${totalShowtimes} сеансів.`);
-    console.log('📅 Новий діапазон дат: 13–22 червня 2026 року (Суворо після 12 червня).');
-    console.log('🏙️ Локалізація міст та кінотеатрів: 3NF Таблиці заповнено (UK та EN).');
-    console.log('🎬 Афіша: Сюжети та назви 10 блокбастерів повністю перекладено.');
-    console.log('=========================================\n🎉 БАЗУ ДАНИХ УСПІШНО ОНОВЛЕНО!');
+    console.log(`✅ Міст: ${cities.length}`);
+    console.log(`✅ Кінотеатрів: ${realTheaters.length}`);
+    console.log(`✅ Залів: ${allHalls.length}`);
+    console.log(`✅ Фільмів: ${createdMovies.length}`);
+    console.log(`✅ Сеансів: ${totalShowtimes}`);
+    console.log('📅 Діапазон дат: 13-30 червня 2026');
+    console.log('=========================================');
+    console.log('🎉 БАЗУ ДАНИХ УСПІШНО НАПОВНЕНО!');
 }
 
 main()
     .catch(e => {
-        console.error('❌ Помилка заповнення бази даних:', e);
+        console.error('❌ Помилка:', e);
         process.exit(1);
     })
     .finally(async () => {
