@@ -15,7 +15,7 @@ import { SuccessBadge } from "./SuccessBadge";
  * @returns {JSX.Element} Екран фіналізації замовлення.
  */
 export const ConfirmationPage = ({ setStep, bookingId }) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const [isDownloading, setIsDownloading] = useState(false);
 
     /**
@@ -38,7 +38,9 @@ export const ConfirmationPage = ({ setStep, bookingId }) => {
             setIsDownloading(true);
             const token = localStorage.getItem('authToken');
 
-            const response = await fetch(`http://localhost:5000/api/bookings/${currentBookingId}/pdf`, {
+            const currentLang = i18n.language || 'uk';
+
+            const response = await fetch(`http://localhost:5000/api/bookings/${currentBookingId}/pdf?lang=${currentLang}`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${token}`

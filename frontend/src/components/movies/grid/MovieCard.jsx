@@ -1,5 +1,5 @@
 import React from "react";
-import { Star, Film, Clock, Heart, MapPin } from "lucide-react"; // Додали MapPin
+import { Film, Clock, Heart } from "lucide-react";
 import { minutesToHMM } from "../../../utils";
 import { cardStyles as s } from "./GridStyles";
 import { Card, Badge } from "../../ui/Atoms";
@@ -8,7 +8,7 @@ import { Card, Badge } from "../../ui/Atoms";
  * Компонент картки фільму для відображення в каталозі.
  * @component
  * @param {Object} props - Властивості компонента.
- * @param {Object} props.movie - Об'єкт із даними про фільм (назва, постер, рейтинг тощо).
+ * @param {Object} props.movie - Об'єкт із даними про фільм (назва, постер тощо).
  * @param {boolean} props.isFavorite - Статус перебування фільму у списку бажаного.
  * @param {Function} props.onOpen - Функція для відкриття детальної інформації.
  * @param {Function} props.onToggleWatchlist - Функція для зміни статусу "обране".
@@ -46,20 +46,13 @@ export const MovieCard = ({ movie, isFavorite, onOpen, onToggleWatchlist, t }) =
                         {movie.title}
                     </h3>
 
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-[13px] font-medium text-slate-400">
-                            <span>{movie.year}</span>
-                            <span className="w-1 h-1 rounded-full bg-slate-200" />
-                            <span className="flex items-center gap-1">
-                                <Clock size={14} className="opacity-70" />
-                                {minutesToHMM(movie.durationMin)}
-                            </span>
-                        </div>
-
-                        <Badge variant="warning" className="gap-1.5 px-2.5">
-                            <Star size={12} fill="currentColor" />
-                            <span className="text-[12px] font-bold">{movie.rating || '0.0'}</span>
-                        </Badge>
+                    <div className="flex items-center gap-2 text-[13px] font-medium text-slate-400">
+                        <span>{movie.year}</span>
+                        <span className="w-1 h-1 rounded-full bg-slate-200" />
+                        <span className="flex items-center gap-1">
+                            <Clock size={14} className="opacity-70" />
+                            {minutesToHMM(movie.durationMin)}
+                        </span>
                     </div>
 
                     <div className="flex flex-wrap gap-2 pt-1">
@@ -70,7 +63,6 @@ export const MovieCard = ({ movie, isFavorite, onOpen, onToggleWatchlist, t }) =
                         ))}
                     </div>
                 </div>
-
             </div>
         </Card>
     );

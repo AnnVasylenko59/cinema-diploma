@@ -4,7 +4,6 @@ export const getMenuItems = (t) => [
     { label: t('profile_menu.settings'), icon: Settings, key: "settings" },
     { label: t('profile_menu.favorites'), icon: Heart, key: "favorites" },
     { label: t('profile_menu.history'), icon: Clock, key: "history" },
-    { label: t('profile_menu.ratings'), icon: Star, key: "ratings" },
 ];
 
 export const styles = {

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import i18n from '../core/i18n.js';
 
 const API_BASE_URL = 'http://localhost:5000/api';
 
@@ -7,18 +8,13 @@ const api = axios.create({
     timeout: 5000,
 });
 
-// Трасування запитів
 api.interceptors.request.use(config => {
     const correlationId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 15);
-
     config.headers['X-Correlation-ID'] = correlationId;
     return config;
-}, error => {
-    return Promise.reject(error);
-});
+}, error => Promise.reject(error));
 
-api.interceptors.request.use(
-    (config) => {
+api.interceptors.request.use(config => {
         const token = localStorage.getItem('authToken');
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
@@ -27,6 +23,25 @@ api.interceptors.request.use(
     },
     (error) => Promise.reject(error)
 );
+
+api.interceptors.request.use(config => {
+    let currentLang = localStorage.getItem('i18nextLng') || i18n.language || 'uk';
+    const prismaLang = currentLang.startsWith('en') ? 'en' : 'uk';
+
+    config.params = {
+        ...config.params,
+        lang: prismaLang
+    };
+
+    config.headers = {
+        ...config.headers,
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+    };
+
+    return config;
+}, error => Promise.reject(error));
 
 api.interceptors.response.use(
     (response) => response,
@@ -40,68 +55,21 @@ api.interceptors.response.use(
  * Об'єкт для роботи з авторизацією та профілем.
  */
 export const authAPI = {
-    /**
-     * @async
-     * @param {Object} credentials - Дані користувача (login/email, password).
-     * @returns {Promise<Object>} Токен та дані профілю.
-     */
     login: (credentials) => api.post('/users/login', credentials),
-    /**
-     * @async
-     * @param {Object} userData - Дані для нового користувача.
-     * @returns {Promise<Object>} Створений профіль.
-     */
     register: (userData) => api.post('/users/register', userData),
-    /**
-     * @async
-     * @returns {Promise<Object>} Дані поточного профілю.
-     */
     getProfile: () => api.get('/users/profile'),
-    /**
-     * @async
-     * @param {Object} userData - Нові дані для оновлення.
-     * @returns {Promise<Object>} Оновлений об'єкт користувача.
-     */
     updateProfile: (userData) => api.put('/users/profile', userData),
-    /**
-     * @async
-     * @param {Object} params - login або email для перевірки.
-     * @returns {Promise<Object>} Статус доступності.
-     */
     checkAvailability: (params) => api.get('/users/check', { params }),
 };
 
 /**
- * Об'єкт для роботи з каталогом фільмів.
+ * Об'єкт для роботи з каталогом逢ільмів.
  */
 export const movieAPI = {
-    /**
-     * @async
-     * @param {Object} [filters] - Фільтри пошуку та жанри.
-     * @returns {Promise<Object>} Список фільмів.
-     */
     getAll: (filters = {}) => api.get('/movies', { params: filters }),
-    /**
-     * @async
-     * @param {number|string} id - Унікальний ID фільму.
-     * @returns {Promise<Object>} Деталі фільму.
-     */
     getById: (id) => api.get(`/movies/${id}`),
-    /**
-     * @async
-     * @param {number|string} id - ID фільму.
-     * @returns {Promise<Object>} Схожі фільми.
-     */
-    getRecommended: (id) => api.get(`/movies/${id}/recommended`),
-    /**
-     * @async
-     * @returns {Promise<Object>} Список жанрів.
-     */
+    getRecommended: () => api.get('/movies/recommendations'),
     getGenres: () => api.get('/genres'),
-    /**
-     * @async
-     * @returns {Promise<Object>} Статус здоров'я API.
-     */
     test: () => api.get('/health')
 };
 
@@ -109,11 +77,6 @@ export const movieAPI = {
  * Об'єкт API для роботи з жанрами фільмів.
  */
 export const genreAPI = {
-    /**
-     * Отримує повний перелік доступних жанрів із бази даних.
-     * @async
-     * @returns {Promise<Object>} Список об'єктів жанрів.
-     */
     getAll: () => api.get('/genres'),
 };
 
@@ -121,11 +84,6 @@ export const genreAPI = {
  * Об'єкт API для роботи з сеансами.
  */
 export const showtimeAPI = {
-    /**
-     * @async
-     * @param {Object} [filters={}] - Параметри (movieId, date, cityId).
-     * @returns {Promise<Object>} Масив сеансів.
-     */
     getShowtimes: (filters = {}) => api.get('/showtimes', { params: filters }),
 };
 
@@ -133,16 +91,7 @@ export const showtimeAPI = {
  * Об'єкт API для роботи з кінотеатрами та містами.
  */
 export const theaterAPI = {
-    /**
-     * @async
-     * @param {Object} [filters={}] - Фільтр за cityId.
-     * @returns {Promise<Object>} Список кінотеатрів.
-     */
     getAll: (filters = {}) => api.get('/theaters', { params: filters }),
-    /**
-     * @async
-     * @returns {Promise<Object>} Масив назв доступних міст.
-     */
     getCities: () => api.get('/theaters/cities'),
 };
 
@@ -150,37 +99,17 @@ export const theaterAPI = {
  * Об'єкт API для керування списком бажаного.
  */
 export const watchlistAPI = {
-    /**
-     * @async
-     * @returns {Promise<Object>} Список фільмів у черзі перегляду користувача.
-     */
     get: () => api.get('/watchlist'),
-    /**
-     * @async
-     * @param {number|string} movieId - ID фільму.
-     * @returns {Promise<Object>} Статус додавання або видалення.
-     */
     toggle: (movieId) => api.post('/watchlist/toggle', { movieId }),
 };
 
 /**
- * Об'єкт API для централізованого логування помилок (Better Stack / ELK).
+ * Об'єкт API для централізованого логування помилок.
  */
 export const logAPI = {
-    /**
-     * Відправляє лог на бекенд для подальшого запису в хмару/файл.
-     * @async
-     * @param {string} message - Опис проблеми.
-     * @param {Object} [context={}] - Додаткові дані (на якій сторінці це сталося тощо).
-     * @returns {Promise<Object>}
-     */
     sendError: async (message, context = {}) => {
         try {
-            await api.post('/logs', {
-                level: 'error',
-                message: message,
-                context: context
-            });
+            await api.post('/logs', { level: 'error', message, context });
         } catch (error) {
             console.warn("⚠️ Не вдалося відправити лог: бекенд недоступний.", error.message);
         }

@@ -89,19 +89,17 @@
     "settings": "Settings",
     "favorites": "Favorites",
     "history": "Booking History",
-    "ratings": "My Ratings",
-    "logout": "Logout"
+    "logout": "Logout",
+    "admin": "Admin Dashboard"
   },
   "filters": {
     "search_placeholder": "Search by title or director...",
     "genres_label": "Genres",
-    "rating_label": "Rating",
     "reset": "Reset",
-    "time_options": {
-      "any": "Any time",
-      "morning": "Morning",
-      "day": "Day",
-      "evening": "Evening"
+    "duration_options": {
+      "short": "Short (under 90 min)",
+      "medium": "Medium (90 - 130 min)",
+      "long": "Long (over 130 min)"
     },
     "genres": {
       "Комедія": "Comedy",
@@ -146,6 +144,9 @@
     "currency": "₴",
     "screen_label": "SCREEN",
     "download_pdf": "Ticket PDF",
+    "any_duration": "Any duration",
+    "no_seats_selected": "No seats selected",
+    "processing": "Processing...",
     "legend": {
       "available": "Available",
       "selected": "Selected",
@@ -160,10 +161,11 @@
     "found_count": "Found: {{count}}",
     "sync": "Syncing movies...",
     "not_found": "Nothing found",
-    "not_found_desc": "Try changing keywords, selecting other genres, or lowering the rating threshold.",
+    "not_found_desc": "Try changing keywords or selecting other filtering options.",
     "reset_filters": "Reset all filters"
   },
   "theaters": {
+    "currently_selected": "Selected movie:",
     "no_sessions_title": "No sessions found",
     "no_sessions_text": "Unfortunately, there are no available sessions for this movie in this city on the selected date.",
     "no_movie_title": "No movie selected",
@@ -187,6 +189,7 @@
     "row": "Row",
     "seat": "Seat",
     "confirmed": "Confirmed",
+    "download_pdf": "Download PDF",
     "empty_title": "History is empty",
     "empty_text": "You haven't booked any seats yet."
   },
@@ -196,19 +199,6 @@
     "empty_title": "It's empty here",
     "empty_text": "Add movies to your favorites to keep them handy.",
     "back_to_afisha": "Back to movies"
-  },
-  "favorites": {
-    "title": "Favorites",
-    "loading": "Loading...",
-    "empty_title": "It's empty here",
-    "empty_text": "Add movies to your favorites to keep them handy.",
-    "back_to_afisha": "Back to movies"
-  },
-  "ratings": {
-    "title": "My Ratings",
-    "empty_title": "No ratings yet",
-    "empty_text": "Your reviews help others choose the best movies. Rate your first movie today!",
-    "to_catalog": "To catalog"
   },
   "theaters_map": {
     "sidebar_title": "City Theaters",
@@ -227,5 +217,69 @@
     "500_message": "Our service is currently experiencing technical issues. Our team has been notified. Please try refreshing the page in a few minutes.",
     "network_title": "Connection lost",
     "network_message": "It seems you are offline. Please check your internet connection and Wi-Fi settings, then try again."
+  },
+  "pdf_ticket": {
+    "header": "CINEMA APP PLUS",
+    "subtitle": "Electronic Movie Ticket",
+    "cinema": "Cinema: ",
+    "hall": "Hall: ",
+    "time": "Time: ",
+    "seat": "Ticket",
+    "row": "Row",
+    "chair": "Seat",
+    "currency": "UAH",
+    "total": "Total paid: ",
+    "qr_info": "Entrance control via QR code"
+  },
+
+  "validation": {
+    "loading": "Checking electronic ticket...",
+    "valid_title": "Access Granted",
+    "used_title": "Duplicate Pass",
+    "invalid_title": "Access Denied",
+    "film": "Movie",
+    "cinema": "Cinema",
+    "session": "Session",
+    "hall": "Hall",
+    "seats": "Seats",
+    "total_seats": "total",
+    "booking": "Booking",
+    "first_in": "First entry made at:",
+    "city_prefix": "",
+    "network_error": "Network connection error with the cinema server"
+  },
+
+  "admin": {
+    "title": "Admin Dashboard",
+    "stats_title": "Cinema Analytics",
+    "total_revenue": "Total Revenue",
+    "tickets_sold": "Tickets Sold",
+    "occupancy_rate": "Hall Occupancy Rate",
+    "top_movies": "Top 5 Grossing Movies",
+    "add_movie": "Add New Movie",
+    "edit_movie": "Edit Movie",
+    "fields": {
+      "title_ua": "Title (UA)",
+      "title_en": "Title (EN)",
+      "description_ua": "Plot Summary (UA)",
+      "description_en": "Plot Summary (EN)",
+      "director": "Director",
+      "year": "Release Year",
+      "duration": "Duration (min)",
+      "poster": "Poster URL",
+      "backdrop": "Backdrop URL",
+      "trailer": "YouTube Trailer ID",
+      "genres": "Genres (comma separated)"
+    },
+    "buttons": {
+      "submit_create": "Create Billboard",
+      "submit_update": "Save Changes",
+      "delete": "Delete Movie"
+    },
+    "messages": {
+      "success_create": "Movie successfully added to 3NF database!",
+      "success_update": "Data and translations successfully updated.",
+      "success_delete": "Movie and all its showtimes cascade deleted."
+    }
   }
 }

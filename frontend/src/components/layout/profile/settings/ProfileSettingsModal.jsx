@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect} from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { User, Camera, Save, RefreshCw, ChevronLeft, ZoomIn, ZoomOut, X, Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -24,7 +24,8 @@ export const ProfileSettingsModal = ({ open, onClose, user, onSave, onGoHome }) 
     const [imageSrc, setImageSrc] = useState(null);
     const [crop, setCrop] = useState({ x: 0, y: 0 });
     const [zoom, setZoom] = useState(1);
-    const [setCroppedAreaPixels] = useState(null);
+
+    const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
     const [showCropper, setShowCropper] = useState(false);
 
     useEffect(() => {
@@ -64,10 +65,52 @@ export const ProfileSettingsModal = ({ open, onClose, user, onSave, onGoHome }) 
         }
     };
 
+    const createImage = (url) =>
+        new Promise((resolve, reject) => {
+            const image = new Image();
+            image.addEventListener('load', () => resolve(image));
+            image.addEventListener('error', (error) => reject(error));
+            image.setAttribute('crossOrigin', 'anonymous');
+            image.src = url;
+        });
+
+    const handleDoCrop = async () => {
+        if (!imageSrc || !croppedAreaPixels) return;
+        setLoading(true);
+        try {
+            const image = await createImage(imageSrc);
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+
+            canvas.width = croppedAreaPixels.width;
+            canvas.height = croppedAreaPixels.height;
+
+            ctx.drawImage(
+                image,
+                croppedAreaPixels.x,
+                croppedAreaPixels.y,
+                croppedAreaPixels.width,
+                croppedAreaPixels.height,
+                0,
+                0,
+                croppedAreaPixels.width,
+                croppedAreaPixels.height
+            );
+
+            const base64Image = canvas.toDataURL('image/jpeg');
+            setFormData(prev => ({ ...prev, avatar: base64Image }));
+            setShowCropper(false);
+        } catch (e) {
+            console.error("Помилка генерації cropped зображення:", e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const Footer = showCropper ? (
         <div className="flex gap-3">
             <ModalButton variant="outline" onClick={() => setShowCropper(false)} icon={X} className="flex-1">{t('profile.cropper.cancel')}</ModalButton>
-            <ModalButton variant="primary" onClick={async () => {/* Логіка handleDoCrop */}} icon={loading ? RefreshCw : Check} className="flex-[1.5]" loading={loading}>{t('profile.cropper.apply')}</ModalButton>
+            <ModalButton variant="primary" onClick={handleDoCrop} icon={loading ? RefreshCw : Check} className="flex-[1.5]" loading={loading}>{t('profile.cropper.apply')}</ModalButton>
         </div>
     ) : (
         <div className="flex flex-col gap-3">

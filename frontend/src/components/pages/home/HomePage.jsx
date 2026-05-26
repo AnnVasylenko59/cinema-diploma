@@ -14,46 +14,37 @@ import { LoadingState } from "../LoadingState.jsx";
 import { EmptyState } from "../../ui/EmptyState";
 
 import { logAPI } from "../../../services/api.js";
+// Імпортуємо наш хук, щоб сторінка працювала автономно
+import { useFilters } from "../../../hooks/useFilters";
 
 /**
- * Головна сторінка каталогу фільмів із слайдером та фільтрами.
+ * Головна сторінка каталогу фільмів із вбудованою автономною фільтрацією.
  * @component
- * @param {Object} props - Властивості компонента.
- * @param {string} props.query - Текст пошукового запиту.
- * @param {Function} props.setQuery - Функція оновлення пошуку.
- * @param {Array<string>} props.selectedGenres - Обрані жанри.
- * @param {Function} props.setSelectedGenres - Функція оновлення жанрів.
- * @param {number} props.rating - Мінімальний рейтинг.
- * @param {Function} props.setRating - Функція оновлення рейтингу.
- * @param {string} props.time - Обраний час сеансів.
- * @param {Function} props.setTime - Функція оновлення часу.
- * @param {Array} props.genres - Список усіх доступних жанрів.
- * @param {Array} props.filtered - Список відфільтрованих фільмів.
- * @param {Array} props.movies - Повний список фільмів для слайдера.
- * @param {boolean} props.loading - Статус завантаження.
- * @param {Object|null} props.error - Об'єкт помилки.
- * @param {Function} props.onOpenMovie - Коллбек для відкриття модалки фільму.
- * @param {Function} props.onWatchTrailer - Коллбек для перегляду трейлера.
- * @param {Function} props.onRetry - Коллбек для повторного запиту при помилці.
- * @param {Array<number>} props.watchlistIds - ID фільмів у списку бажаного.
- * @param {Function} props.onToggleWatchlist - Коллбек для перемикання списку бажаного.
- * @returns {JSX.Element} Головна сторінка з сіткою фільмів або станами завантаження/помилки.
  */
 export const HomePage = ({
-                             query, setQuery, selectedGenres, setSelectedGenres,
-                             rating, setRating, time, setTime,
-                             genres = [], filtered = [], movies = [],
-                             loading, error, onOpenMovie, onWatchTrailer,
-                             onRetry, watchlistIds, onToggleWatchlist
+                             genres = [],
+                             onOpenMovie,
+                             onWatchTrailer,
+                             watchlistIds,
+                             onToggleWatchlist
                          }) => {
     const { t } = useTranslation();
+
+    const {
+        query, setQuery,
+        selectedGenres, setSelectedGenres,
+        duration, setDuration,
+        movies, filtered,
+        loading, error
+    } = useFilters();
+
     const promoItems = movies.slice(0, 5);
 
+    // Функція скидання фільтрів
     const resetFilters = () => {
         setQuery("");
         setSelectedGenres([]);
-        setRating(0);
-        setTime("any");
+        setDuration("any");
     };
 
     if (error) {
@@ -61,16 +52,14 @@ export const HomePage = ({
         return (
             <ErrorState
                 type={errorType}
-                onRetry={onRetry}
+                onRetry={() => window.location.reload()}
                 onReport={() => {
-                    // 1. Лог у Better Stack
                     logAPI.sendError("Користувач повідомив про проблему на сторінці Каталогу", {
                         page: "HomePage",
                         errorType: errorType,
                         action: "User clicked report button"
                     });
 
-                    // 2. Форма Sentry
                     const eventId = Sentry.captureMessage("User Feedback: Issue on HomePage");
 
                     Sentry.showReportDialog({
@@ -92,7 +81,7 @@ export const HomePage = ({
 
     return (
         <div className="space-y-10 pb-20">
-            {/* 1. СЛАЙДЕР */}
+            {/* 1. СЛАЙДЕР СВІЖИХ ПРЕМ'ЄР */}
             {!loading && promoItems.length > 0 && (
                 <Slider items={promoItems} onWatchTrailer={onWatchTrailer} />
             )}
@@ -103,20 +92,18 @@ export const HomePage = ({
                     genres={genres}
                     selectedGenres={selectedGenres}
                     setSelectedGenres={setSelectedGenres}
-                    rating={rating}
-                    setRating={setRating}
-                    time={time}
-                    setTime={setTime}
+                    duration={duration}
+                    setDuration={setDuration}
                     query={query}
                     setQuery={setQuery}
                 />
             </div>
 
             <section className="space-y-8">
-                {/* 3. ЗАГОЛОВОК КАТАЛОГУ */}
+                {/* 3. ДИНАМІЧНИЙ ЗАГОЛОВОК КАТАЛОГУ */}
                 <CatalogHeader loading={loading} count={filtered.length} />
 
-                {/* 4. ОСНОВНИЙ КОНТЕНТ */}
+                {/* 4. СІТКА ФІЛЬМІВ АБО СТАН ПОРОЖНЕЧІ */}
                 {loading ? (
                     <LoadingState label={t('home.sync')} />
                 ) : filtered.length > 0 ? (

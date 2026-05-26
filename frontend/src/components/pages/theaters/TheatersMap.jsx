@@ -74,12 +74,12 @@ export const TheatersMap = ({
     }, [selectedTheaterId, theatersWithCoords]);
 
     return (
-        <div className="flex flex-col lg:flex-row h-[600px] w-full bg-white rounded-[3rem] overflow-hidden shadow-2xl border border-slate-100">
+        <div key={i18n.language} className="flex flex-col lg:flex-row h-[600px] w-full bg-white rounded-[3rem] overflow-hidden shadow-2xl border border-slate-100">
 
             {/* ЛІВА ЧАСТИНА: ІНТЕРАКТИВНА МАПА */}
             <div className="flex-[2.5] relative z-10 border-r border-slate-50">
                 <MapContainer
-                    center={[selectedCity.lat, selectedCity.lng]}
+                    center={[selectedCity?.lat || 50.4501, selectedCity?.lng || 30.5234]}
                     zoom={12}
                     style={{ height: "100%", width: "100%" }}
                     zoomControl={false}

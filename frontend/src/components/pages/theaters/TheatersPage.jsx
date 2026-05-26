@@ -1,8 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import {
-    MapPin, Film, ChevronDown, Star,
-    Search
-} from "lucide-react";
+import { MapPin, Film, ChevronDown, Star, Search } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 
@@ -19,20 +16,6 @@ import { TheatersMap } from "./TheatersMap";
 
 import { showtimeAPI, theaterAPI, movieAPI, logAPI } from "../../../services/api";
 
-/**
- * Сторінка вибору кінотеатру та часу сеансу для конкретного фільму.
- * @component
- * @param {Object} props - Властивості компонента.
- * @param {Object} props.currentMovie - Об'єкт поточного обраного фільму.
- * @param {Function} props.setStep - Навігація між кроками.
- * @param {Function} props.onPickShowtime - Коллбек вибору сеансу.
- * @param {Function} props.onOpenMovie - Коллбек відкриття деталей рекомендованого фільму.
- * @param {string} props.selectedDate - Обрана дата у форматі ISO.
- * @param {Function} props.setSelectedDate - Зміна дати.
- * @param {Object} props.selectedCity - Обране місто.
- * @param {Function} props.setSelectedCity - Зміна міста.
- * @returns {JSX.Element} Сторінка з картою кінотеатрів та рекомендованими фільмами.
- */
 export const TheatersPage = ({
                                  currentMovie: propMovie,
                                  setStep,
@@ -44,7 +27,8 @@ export const TheatersPage = ({
                                  setSelectedCity
                              }) => {
     const { t, i18n } = useTranslation();
-    const currentLocale = i18n.language === 'en' ? 'en-US' : 'uk-UA';
+    const currentLocale = i18n.language?.startsWith('en') ? 'en-US' : 'uk-UA';
+    const prismaLang = i18n.language?.startsWith('en') ? 'en' : 'uk';
     const todayStr = new Date().toISOString().split("T")[0];
 
     const [viewDate, setViewDate] = useState(new Date(selectedDate));
@@ -61,52 +45,35 @@ export const TheatersPage = ({
     const [isCalendarOpen, setIsCalendarOpen] = useState(false);
     const calendarRef = useRef(null);
 
-    /**
-     * Отримує список міст із сервера.
-     * @async
-     * @function fetchCities
-     * @returns {Promise<Object>} Обране або перше доступне місто.
-     */
+    const isInitialized = useRef(false);
+
     const fetchCities = useCallback(async () => {
         try {
-            const res = await theaterAPI.getCities();
+            const res = await theaterAPI.getCities({ lang: prismaLang });
             const data = res.data.cities || res.data;
             setCities(data);
-            if (data.length > 0 && !selectedCity) {
-                setSelectedCity(data[0]);
-                return data[0];
-            }
-            return selectedCity;
-        } catch (e) {
-            console.error("Cities load error:", e);
-            throw e;
+            return data;
+        } catch (error) {
+            console.error("Cities load error:", error);
+            throw error;
         }
-    }, [selectedCity, setSelectedCity]);
+    }, [prismaLang]);
 
-    /**
-     * Завантажує сеанси, кінотеатри та рекомендації для обраного міста.
-     * @async
-     * @function loadContent
-     * @param {Object} city - Об'єкт міста, для якого завантажується контент.
-     * @returns {Promise<void>}
-     */
-    const loadContent = useCallback(async (city = selectedCity) => {
-        if (!propMovie) {
-            setIsLoading(false);
-            return;
+    const loadContent = useCallback(async (city, date) => {
+        if (!propMovie || !city) {
+            return false;
         }
-
-        if (!city) return;
 
         try {
             const [showRes, theaterRes, recRes] = await Promise.all([
                 showtimeAPI.getShowtimes({
                     movieId: propMovie.id,
-                    date: selectedDate,
-                    cityId: city.id
+                    date: date,
+                    cityId: city.id,
+                    lang: prismaLang
                 }),
-                theaterAPI.getAll({ cityId: city.id }),
-                movieAPI.getRecommended(propMovie.id)
+                theaterAPI.getAll({ cityId: city.id, lang: prismaLang }),
+                movieAPI.getRecommended({ lang: prismaLang })
             ]);
 
             const now = new Date();
@@ -116,12 +83,13 @@ export const TheatersPage = ({
 
             setShowtimes(filteredShowtimes);
             setTheaters(theaterRes.data.theaters || theaterRes.data || []);
-            setRecommended(recRes.data || []);
+            setRecommended(recRes.data?.movies || recRes.data || []);
 
             if (filteredShowtimes.length === 0) {
                 const allFutureRes = await showtimeAPI.getShowtimes({
                     movieId: propMovie.id,
-                    cityId: city.id
+                    cityId: city.id,
+                    lang: prismaLang
                 });
 
                 const futureDates = (allFutureRes.data || [])
@@ -133,14 +101,12 @@ export const TheatersPage = ({
                 setNextDate(null);
             }
 
-            setError(false);
-        } catch (e) {
-            console.error("Content load error:", e);
-            setError(true);
-        } finally {
-            setIsLoading(false);
+            return true;
+        } catch (error) {
+            console.error("Content load error:", error);
+            throw error;
         }
-    }, [propMovie, selectedDate, selectedCity]);
+    }, [propMovie, prismaLang]);
 
     const handleGoToDate = useCallback((date) => {
         const dateStr = date.toISOString().split('T')[0];
@@ -148,29 +114,67 @@ export const TheatersPage = ({
         setViewDate(date);
     }, [setSelectedDate]);
 
+    const handleCitySelect = useCallback((city) => {
+        setSelectedCity(city);
+        setIsCityOpen(false);
+    }, [setSelectedCity]);
+
+    // Initial load
     useEffect(() => {
-        const init = async () => {
+        if (isInitialized.current) return;
+
+        const initialize = async () => {
             setIsLoading(true);
+            setError(false);
+
             try {
-                const city = await fetchCities();
-                await loadContent(city);
-            } catch {
+                const citiesData = await fetchCities();
+
+                let currentCity = selectedCity;
+                if (!currentCity && citiesData.length > 0) {
+                    currentCity = citiesData[0];
+                    setSelectedCity(currentCity);
+                }
+
+                if (currentCity && propMovie) {
+                    await loadContent(currentCity, selectedDate);
+                }
+
+                isInitialized.current = true;
+            } catch (error) {
+                console.error("Initialization error:", error);
                 setError(true);
+            } finally {
                 setIsLoading(false);
             }
         };
-        init();
-    }, [fetchCities, loadContent]);
 
+        initialize();
+    }, [fetchCities, propMovie, selectedCity, setSelectedCity, loadContent, selectedDate]);
+
+    // Update when date or city changes
     useEffect(() => {
-        if (!isLoading && !error) {
-            loadContent();
+        if (!isInitialized.current || !selectedCity || !propMovie) {
+            return;
         }
-    }, [selectedDate, selectedCity?.id, loadContent, isLoading, error]);
+
+        const updateContent = async () => {
+            setIsLoading(true);
+            try {
+                await loadContent(selectedCity, selectedDate);
+            } catch {
+                setError(true);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        updateContent();
+    }, [selectedDate, selectedCity, propMovie, loadContent]);
 
     useEffect(() => {
-        const handleClickOutside = (e) => {
-            if (calendarRef.current && !calendarRef.current.contains(e.target)) {
+        const handleClickOutside = (event) => {
+            if (calendarRef.current && !calendarRef.current.contains(event.target)) {
                 setIsCalendarOpen(false);
             }
         };
@@ -185,7 +189,6 @@ export const TheatersPage = ({
                 onRetry={() => window.location.reload()}
                 onBack={() => setStep("home")}
                 onReport={() => {
-                    // 1. Лог у Better Stack
                     logAPI.sendError("Користувач повідомив про проблему на сторінці Кінотеатрів", {
                         page: "TheatersPage",
                         movieId: propMovie?.id,
@@ -194,21 +197,8 @@ export const TheatersPage = ({
                         action: "User clicked report button"
                     });
 
-                    // 2. Форма Sentry
                     const eventId = Sentry.captureMessage("User Feedback: Issue on TheatersPage");
-
-                    Sentry.showReportDialog({
-                        eventId,
-                        title: "Повідомити про проблему",
-                        subtitle: "Будь ласка, опишіть кроки, які призвели до цієї помилки.",
-                        subtitle2: "Це допоможе нам швидко все полагодити.",
-                        labelName: "Ваше ім'я",
-                        labelEmail: "Ваш Email",
-                        labelComments: "Що пішло не так? (Кроки відтворення)",
-                        labelSubmit: "Відправити звіт",
-                        labelClose: "Закрити",
-                        successMessage: "Дякуємо! Ваш звіт та технічні дані успішно відправлено."
-                    });
+                    Sentry.showReportDialog({ eventId });
                 }}
             />
         );
@@ -243,6 +233,7 @@ export const TheatersPage = ({
             <div className="flex flex-wrap items-center gap-3">
                 <div className="relative">
                     <button
+                        key={prismaLang}
                         onClick={() => setIsCityOpen(!isCityOpen)}
                         className="flex items-center gap-3 bg-white px-8 py-4 rounded-[1.8rem] border border-slate-100 shadow-sm font-black text-slate-900 uppercase tracking-tighter hover:border-blue-400 active:scale-[0.98] transition-all"
                     >
@@ -253,18 +244,26 @@ export const TheatersPage = ({
                     <AnimatePresence>
                         {isCityOpen && (
                             <motion.div
-                                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: 10 }}
                                 className="absolute top-full left-0 mt-3 w-56 bg-white rounded-[2rem] shadow-2xl border border-slate-50 p-3 z-[120]"
                             >
-                                {cities.map(c => (
-                                    <button
-                                        key={c.id}
-                                        onClick={() => { setSelectedCity(c); setIsCityOpen(false); }}
-                                        className="w-full text-left px-5 py-3 hover:bg-blue-600 hover:text-white rounded-2xl text-xs font-black uppercase transition-all mb-1 active:scale-95"
-                                    >
-                                        {c.name}
-                                    </button>
-                                ))}
+                                {cities.length > 0 ? (
+                                    cities.map(c => (
+                                        <button
+                                            key={c.id}
+                                            onClick={() => handleCitySelect(c)}
+                                            className="w-full text-left px-5 py-3 hover:bg-blue-600 hover:text-white rounded-2xl text-xs font-black uppercase transition-all mb-1 active:scale-95"
+                                        >
+                                            {c.name}
+                                        </button>
+                                    ))
+                                ) : (
+                                    <div className="px-5 py-3 text-xs text-slate-400 text-center">
+                                        {t('common.no_cities')}
+                                    </div>
+                                )}
                             </motion.div>
                         )}
                     </AnimatePresence>
@@ -285,7 +284,7 @@ export const TheatersPage = ({
             </div>
 
             <TheatersMap
-                key={`${selectedCity?.id}-${selectedDate}`}
+                key={`${selectedCity?.id}-${selectedDate}-${prismaLang}`}
                 theaters={theaters}
                 showtimes={showtimes}
                 selectedCity={selectedCity}

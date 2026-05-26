@@ -3,18 +3,20 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import axios from "axios";
 
-// Складові інтерфейсу (додаємо ../ щоб вийти з core до src)
+// Складові інтерфейсу
 import { Header } from "../components/layout/header/Header.jsx";
 import { Footer } from "../components/layout/footer/Footer.jsx";
 import { LoginModal } from "../components/layout/auth/LoginModal.jsx";
 import { RegisterModal } from "../components/layout/auth/RegisterModal.jsx";
 import { MovieModal } from "../components/movies/modal/MovieModal.jsx";
+import { AdminModal } from "../components/layout/profile/admin/AdminModal.jsx";
 
 // Сторінки
 import { HomePage } from "../components/pages/home/HomePage.jsx";
 import { TheatersPage } from "../components/pages/theaters/TheatersPage.jsx";
 import { BookingPage } from "../components/pages/booking/BookingPage.jsx";
 import { ConfirmationPage } from "../components/pages/booking/ConfirmationPage.jsx";
+import { TicketValidationPage } from "../components/pages/booking/TicketValidationPage.jsx";
 
 // Профільні модалки
 import { ProfileSettingsModal } from "../components/layout/profile/settings/ProfileSettingsModal.jsx";
@@ -24,7 +26,6 @@ import { RatingsModal } from "../components/layout/profile/ratings/RatingsModal.
 
 // Хуки та сервіси
 import { useAuth } from "../hooks/useAuth.js";
-import { useFilters } from "../hooks/useFilters.js";
 import { movieAPI, watchlistAPI, genreAPI } from "../services/api.js";
 
 export default function App() {
@@ -32,7 +33,6 @@ export default function App() {
     const todayStr = useMemo(() => new Date().toISOString().split("T")[0], []);
 
     // Глобальні стани інтерфейсу
-    const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
     const [step, setStep] = useState("home");
 
     // Стани для збереження вибору користувача
@@ -60,17 +60,8 @@ export default function App() {
     const [bookingId, setBookingId] = useState(null);
 
     const { user, login, register, logout, updateUser } = useAuth();
-    const filters = useFilters();
 
     const isAnyModalOpen = !!(profileModal || openMovie || loginOpen || registerOpen);
-
-    // Теми та ефекти
-    useEffect(() => {
-        document.documentElement.className = theme;
-        localStorage.setItem('theme', theme);
-    }, [theme]);
-
-    const handleToggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
 
     const loadInitialData = useCallback(async () => {
         setLoading(true);
@@ -86,7 +77,7 @@ export default function App() {
             }
         } catch {
             setError(t('errors.default_message'));
-        } finally {
+        } finally {  
             setLoading(false);
         }
     }, [t]);
@@ -104,18 +95,6 @@ export default function App() {
     useEffect(() => { loadInitialData(); }, [loadInitialData]);
     useEffect(() => { fetchWatchlist(); }, [fetchWatchlist]);
 
-    const filteredMovies = useMemo(() => {
-        return movies.filter(m => {
-            const matchesQuery = m.title.toLowerCase().includes(filters.query.toLowerCase());
-            const matchesRating = (m.rating || 0) >= filters.rating;
-            const matchesGenres = filters.selectedGenres.length === 0 ||
-                filters.selectedGenres.every(selectedName =>
-                    m.genres?.some(mg => mg.genre.name === selectedName)
-                );
-            return matchesQuery && matchesRating && matchesGenres;
-        });
-    }, [movies, filters.query, filters.rating, filters.selectedGenres]);
-
     const handleConfirmSeats = useCallback(async (selectedSeats) => {
         if (!user) {
             setLoginOpen(true);
@@ -130,14 +109,9 @@ export default function App() {
             );
 
             if (res.data.success) {
-                // Зберігаємо bookingId в стані
                 const newBookingId = res.data.bookingId;
                 setBookingId(newBookingId);
-
-                // Переходимо на сторінку підтвердження
                 setStep("confirmation");
-
-                // Повертаємо bookingId для ланцюжка викликів
                 return { success: true, bookingId: newBookingId };
             }
 
@@ -183,17 +157,37 @@ export default function App() {
     };
 
     const renderPage = () => {
+        const validateIdMatch = window.location.pathname.match(/\/validate-ticket\/(\d+)/);
+
+        if (validateIdMatch) {
+            const parsedBookingId = validateIdMatch[1];
+            return <TicketValidationPage bookingId={parsedBookingId} />;
+        }
+
+        if (loading) {
+            return (
+                <div className="flex flex-col items-center justify-center min-h-[50vh] p-6 text-center">
+                    <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-3"></div>
+                    <p className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Завантаження даних кінотеатру...</p>
+                </div>
+            );
+        }
+
+        if (error) {
+            return (
+                <div className="flex flex-col items-center justify-center min-h-[50vh] p-6 text-center">
+                    <div className="text-red-500 bg-red-50 px-6 py-4 rounded-2xl border border-red-100 max-w-sm font-medium text-sm shadow-sm">
+                        {error}
+                    </div>
+                </div>
+            );
+        }
+
         switch (step) {
             case "home":
                 return (
                     <HomePage
-                        {...filters}
-                        movies={movies}
-                        filtered={filteredMovies}
                         genres={genres}
-                        loading={loading}
-                        error={error}
-                        onRetry={loadInitialData}
                         onOpenMovie={setOpenMovie}
                         onWatchTrailer={setOpenMovie}
                         watchlistIds={watchlistIds}
@@ -229,7 +223,7 @@ export default function App() {
     };
 
     return (
-        <div className={`min-h-screen transition-colors duration-500 ${theme === 'dark' ? 'bg-slate-950 text-white' : 'bg-[#f1f5f9] text-gray-900'}`}>
+        <div className="min-h-screen bg-[#f1f5f9] text-gray-900 transition-colors duration-500">
             <div className={`sticky top-0 z-[50] ${
                 isAnyModalOpen
                     ? "blur-md opacity-40 pointer-events-none scale-[0.99] transition-all duration-500"
@@ -242,8 +236,6 @@ export default function App() {
                     onLogout={logout}
                     onOpenLoginModal={() => setLoginOpen(true)}
                     onMenuSelect={setProfileModal}
-                    theme={theme}
-                    onToggleTheme={handleToggleTheme}
                 />
             </div>
 
@@ -286,12 +278,21 @@ export default function App() {
                 onToggleWatchlist={handleToggleWatchlist}
             />
 
-            {/* Профільні модалки */}
+            {/* Профільні модалки та Панель адміністратора */}
             {profileModal === "settings" && <ProfileSettingsModal open onClose={() => setProfileModal(null)} user={user} onSave={updateUser} onGoHome={handleGoHome} />}
             {profileModal === "favorites" && <FavoritesModal open onClose={() => setProfileModal(null)} user={user} watchlistIds={watchlistIds} onToggleWatchlist={handleToggleWatchlist} onOpenMovie={(m) => handleOpenMovieFromProfile(m, "favorites")} onGoHome={handleGoHome} />}
             {profileModal === "history" && <BookingsHistoryModal open onClose={() => setProfileModal(null)} user={user} onOpenMovie={(m) => handleOpenMovieFromProfile(m, "history")} onGoHome={handleGoHome} />}
             {profileModal === "ratings" && <RatingsModal open onClose={() => setProfileModal(null)} user={user} onOpenMovie={(m) => handleOpenMovieFromProfile(m, "ratings")} onGoHome={handleGoHome} />}
 
+            {profileModal === "admin" && (
+                <AdminModal
+                    isOpen
+                    onClose={() => setProfileModal(null)}
+                    movies={movies}
+                    genres={genres}
+                    onRefresh={loadInitialData}
+                />
+            )}
             <Footer />
         </div>
     );

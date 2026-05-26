@@ -1,23 +1,13 @@
-const jwt = require('jsonwebtoken');
+import jwt from 'jsonwebtoken';
 
 /**
  * МЕХАНІЗМ БЕЗПЕКИ: Stateless-аутентифікація через JWT.
- * * ### АРХІТЕКТУРНЕ РІШЕННЯ:
- * Даний мідлвар реалізує шар безпеки (Security Layer) за патерном "Bearer Token".
- * Він перехоплює запит до потрапляння в контролери, гарантуючи, що доступ мають лише
- * авторизовані користувачі. Це забезпечує масштабованість системи, оскільки сервер
- * не зберігає стан сесій.
- * * ### БІЗНЕС-ЛОГІКА:
- * 1. Перевірка наявності та формату заголовка Authorization.
- * 2. Декодування та верифікація цифрового підпису токена.
- * 3. Ініціалізація об'єкта користувача (id, login, isAdmin) у запиті для подальшого використання.
- * * @param {Object} req - Об'єкт запиту Express.
+ * @param {Object} req - Об'єкт запиту Express.
  * @param {Object} res - Об'єкт відповіді Express.
  * @param {Function} next - Функція передачі керування наступному обробнику.
  * @returns {void}
- * @see backend/tests/auth.test.js - Сценарії тестування валідності токенів.
  */
-const auth = (req, res, next) => {
+export const auth = (req, res, next) => {
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -31,7 +21,6 @@ const auth = (req, res, next) => {
         const decoded = jwt.verify(token, secret);
 
         req.user = decoded;
-
         next();
     } catch (error) {
         console.error('JWT Verification Error:', error.message);
@@ -39,4 +28,16 @@ const auth = (req, res, next) => {
     }
 };
 
-module.exports = auth;
+/**
+ * МЕХАНІЗМ КОНТРОЛЮ ДОСТУПУ (RBAC): Перевірка прав адміністратора.
+ * @param {Object} req - Об'єкт запиту Express.
+ * @param {Object} res - Об'єкт відповіді Express.
+ * @param {Function} next - Функція передачі керування наступному обробнику.
+ * @returns {void}
+ */
+export const isAdmin = (req, res, next) => {
+    if (!req.user || !req.user.isAdmin) {
+        return res.status(403).json({ error: 'Доступ відхилено. Потрібні права адміністратора.' });
+    }
+    next();
+};
