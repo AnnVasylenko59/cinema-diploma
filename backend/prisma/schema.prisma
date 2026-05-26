@@ -38,6 +38,9 @@ model Movie {
   showtimes    Showtime[]
   watchlist    WatchlistItem[]
   translations MovieTranslation[]
+
+  @@index([addedAt])
+  @@index([rating])
 }
 
 model MovieTranslation {
@@ -139,6 +142,9 @@ model Showtime {
   movie     Movie     @relation(fields: [movieId], references: [id])
   hall      Hall      @relation(fields: [hallId], references: [id])
   bookings  Booking[]
+
+  @@index([startTime])
+  @@index([movieId])
 }
 
 model Booking {
@@ -150,6 +156,8 @@ model Booking {
   tickets    Ticket[]
   createdAt  DateTime @default(now())
   isUsed     Boolean  @default(false)
+
+  @@index([userId])
 }
 
 model Ticket {
@@ -159,6 +167,8 @@ model Ticket {
   price     Float
   booking   Booking @relation(fields: [bookingId], references: [id])
   seat      Seat    @relation(fields: [seatId], references: [id])
+
+  @@index([bookingId])
 }
 
 model WatchlistItem {
