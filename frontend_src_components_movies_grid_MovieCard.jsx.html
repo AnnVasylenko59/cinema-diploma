@@ -29,7 +29,7 @@
 <nav >
     
     
-    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-bookingController.html">bookingController</a></li><li><a href="module-hooks_useFilters.html">hooks/useFilters</a></li></ul><h3>Global</h3><ul><li><a href="global.html#BookingPage">BookingPage</a></li><li><a href="global.html#ConfirmationPage">ConfirmationPage</a></li><li><a href="global.html#HomePage">HomePage</a></li><li><a href="global.html#LoginModal">LoginModal</a></li><li><a href="global.html#MovieCard">MovieCard</a></li><li><a href="global.html#SeatPicker">SeatPicker</a></li><li><a href="global.html#TheatersPage">TheatersPage</a></li><li><a href="global.html#auth">auth</a></li><li><a href="global.html#authAPI">authAPI</a></li><li><a href="global.html#authenticateToken">authenticateToken</a></li><li><a href="global.html#checkAvailability">checkAvailability</a></li><li><a href="global.html#checkDatabaseConnection">checkDatabaseConnection</a></li><li><a href="global.html#classNames">classNames</a></li><li><a href="global.html#fetchCities">fetchCities</a></li><li><a href="global.html#fetchSeats">fetchSeats</a></li><li><a href="global.html#genreAPI">genreAPI</a></li><li><a href="global.html#getAllMovies">getAllMovies</a></li><li><a href="global.html#getMovieById">getMovieById</a></li><li><a href="global.html#getProfile">getProfile</a></li><li><a href="global.html#getRecommendedMovies">getRecommendedMovies</a></li><li><a href="global.html#getShowtimes">getShowtimes</a></li><li><a href="global.html#handleConfirm">handleConfirm</a></li><li><a href="global.html#handleDownloadPDF">handleDownloadPDF</a></li><li><a href="global.html#loadContent">loadContent</a></li><li><a href="global.html#logAPI">logAPI</a></li><li><a href="global.html#loginUser">loginUser</a></li><li><a href="global.html#minutesToHMM">minutesToHMM</a></li><li><a href="global.html#movieAPI">movieAPI</a></li><li><a href="global.html#register">register</a></li><li><a href="global.html#showtimeAPI">showtimeAPI</a></li><li><a href="global.html#theaterAPI">theaterAPI</a></li><li><a href="global.html#updateProfile">updateProfile</a></li><li><a href="global.html#useAuth">useAuth</a></li><li><a href="global.html#validateEmail">validateEmail</a></li><li><a href="global.html#validatePassword">validatePassword</a></li><li><a href="global.html#validateRating">validateRating</a></li><li><a href="global.html#validateUsername">validateUsername</a></li><li><a href="global.html#watchlistAPI">watchlistAPI</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-controllers_bookingController.html">controllers/bookingController</a></li><li><a href="module-hooks_useFilters.html">hooks/useFilters</a></li></ul><h3>Global</h3><ul><li><a href="global.html#ConfirmationPage">ConfirmationPage</a></li><li><a href="global.html#HomePage">HomePage</a></li><li><a href="global.html#LoginModal">LoginModal</a></li><li><a href="global.html#MovieCard">MovieCard</a></li><li><a href="global.html#SeatPicker">SeatPicker</a></li><li><a href="global.html#auth">auth</a></li><li><a href="global.html#authAPI">authAPI</a></li><li><a href="global.html#authenticateToken">authenticateToken</a></li><li><a href="global.html#checkAvailability">checkAvailability</a></li><li><a href="global.html#checkDatabaseConnection">checkDatabaseConnection</a></li><li><a href="global.html#classNames">classNames</a></li><li><a href="global.html#createMovie">createMovie</a></li><li><a href="global.html#createTheater">createTheater</a></li><li><a href="global.html#deleteMovie">deleteMovie</a></li><li><a href="global.html#genreAPI">genreAPI</a></li><li><a href="global.html#getAllMovies">getAllMovies</a></li><li><a href="global.html#getCities">getCities</a></li><li><a href="global.html#getLocalIpAddress">getLocalIpAddress</a></li><li><a href="global.html#getMovieById">getMovieById</a></li><li><a href="global.html#getMovieStats">getMovieStats</a></li><li><a href="global.html#getProfile">getProfile</a></li><li><a href="global.html#getRecommendedMovies">getRecommendedMovies</a></li><li><a href="global.html#getShowtimes">getShowtimes</a></li><li><a href="global.html#getTheaters">getTheaters</a></li><li><a href="global.html#handleDownloadPDF">handleDownloadPDF</a></li><li><a href="global.html#isAdmin">isAdmin</a></li><li><a href="global.html#logAPI">logAPI</a></li><li><a href="global.html#loginUser">loginUser</a></li><li><a href="global.html#minutesToHMM">minutesToHMM</a></li><li><a href="global.html#movieAPI">movieAPI</a></li><li><a href="global.html#register">register</a></li><li><a href="global.html#showtimeAPI">showtimeAPI</a></li><li><a href="global.html#theaterAPI">theaterAPI</a></li><li><a href="global.html#updateMovie">updateMovie</a></li><li><a href="global.html#updateProfile">updateProfile</a></li><li><a href="global.html#useAuth">useAuth</a></li><li><a href="global.html#validateEmail">validateEmail</a></li><li><a href="global.html#validatePassword">validatePassword</a></li><li><a href="global.html#validateRating">validateRating</a></li><li><a href="global.html#validateUsername">validateUsername</a></li><li><a href="global.html#watchlistAPI">watchlistAPI</a></li></ul>
     
 </nav>
 
@@ -46,7 +46,7 @@
     <section>
         <article>
             <pre class="prettyprint source linenums"><code>import React from "react";
-import { Star, Film, Clock, Heart, MapPin } from "lucide-react"; // Додали MapPin
+import { Film, Clock, Heart } from "lucide-react";
 import { minutesToHMM } from "../../../utils";
 import { cardStyles as s } from "./GridStyles";
 import { Card, Badge } from "../../ui/Atoms";
@@ -55,7 +55,7 @@ import { Card, Badge } from "../../ui/Atoms";
  * Компонент картки фільму для відображення в каталозі.
  * @component
  * @param {Object} props - Властивості компонента.
- * @param {Object} props.movie - Об'єкт із даними про фільм (назва, постер, рейтинг тощо).
+ * @param {Object} props.movie - Об'єкт із даними про фільм (назва, постер тощо).
  * @param {boolean} props.isFavorite - Статус перебування фільму у списку бажаного.
  * @param {Function} props.onOpen - Функція для відкриття детальної інформації.
  * @param {Function} props.onToggleWatchlist - Функція для зміни статусу "обране".
@@ -93,20 +93,13 @@ export const MovieCard = ({ movie, isFavorite, onOpen, onToggleWatchlist, t }) =
                         {movie.title}
                     &lt;/h3>
 
-                    &lt;div className="flex items-center justify-between">
-                        &lt;div className="flex items-center gap-2 text-[13px] font-medium text-slate-400">
-                            &lt;span>{movie.year}&lt;/span>
-                            &lt;span className="w-1 h-1 rounded-full bg-slate-200" />
-                            &lt;span className="flex items-center gap-1">
-                                &lt;Clock size={14} className="opacity-70" />
-                                {minutesToHMM(movie.durationMin)}
-                            &lt;/span>
-                        &lt;/div>
-
-                        &lt;Badge variant="warning" className="gap-1.5 px-2.5">
-                            &lt;Star size={12} fill="currentColor" />
-                            &lt;span className="text-[12px] font-bold">{movie.rating || '0.0'}&lt;/span>
-                        &lt;/Badge>
+                    &lt;div className="flex items-center gap-2 text-[13px] font-medium text-slate-400">
+                        &lt;span>{movie.year}&lt;/span>
+                        &lt;span className="w-1 h-1 rounded-full bg-slate-200" />
+                        &lt;span className="flex items-center gap-1">
+                            &lt;Clock size={14} className="opacity-70" />
+                            {minutesToHMM(movie.durationMin)}
+                        &lt;/span>
                     &lt;/div>
 
                     &lt;div className="flex flex-wrap gap-2 pt-1">
@@ -117,7 +110,6 @@ export const MovieCard = ({ movie, isFavorite, onOpen, onToggleWatchlist, t }) =
                         ))}
                     &lt;/div>
                 &lt;/div>
-
             &lt;/div>
         &lt;/Card>
     );
@@ -135,7 +127,7 @@ export const MovieCard = ({ movie, isFavorite, onOpen, onToggleWatchlist, t }) =
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Mon May 18 2026 11:52:14 GMT+0000 (Coordinated Universal Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Tue May 26 2026 18:05:21 GMT+0000 (Coordinated Universal Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
 </footer>
 
 <script>prettyPrint();</script>

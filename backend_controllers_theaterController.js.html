@@ -29,7 +29,7 @@
 <nav >
     
     
-    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-bookingController.html">bookingController</a></li><li><a href="module-hooks_useFilters.html">hooks/useFilters</a></li></ul><h3>Global</h3><ul><li><a href="global.html#BookingPage">BookingPage</a></li><li><a href="global.html#ConfirmationPage">ConfirmationPage</a></li><li><a href="global.html#HomePage">HomePage</a></li><li><a href="global.html#LoginModal">LoginModal</a></li><li><a href="global.html#MovieCard">MovieCard</a></li><li><a href="global.html#SeatPicker">SeatPicker</a></li><li><a href="global.html#TheatersPage">TheatersPage</a></li><li><a href="global.html#auth">auth</a></li><li><a href="global.html#authAPI">authAPI</a></li><li><a href="global.html#authenticateToken">authenticateToken</a></li><li><a href="global.html#checkAvailability">checkAvailability</a></li><li><a href="global.html#checkDatabaseConnection">checkDatabaseConnection</a></li><li><a href="global.html#classNames">classNames</a></li><li><a href="global.html#fetchCities">fetchCities</a></li><li><a href="global.html#fetchSeats">fetchSeats</a></li><li><a href="global.html#genreAPI">genreAPI</a></li><li><a href="global.html#getAllMovies">getAllMovies</a></li><li><a href="global.html#getMovieById">getMovieById</a></li><li><a href="global.html#getProfile">getProfile</a></li><li><a href="global.html#getRecommendedMovies">getRecommendedMovies</a></li><li><a href="global.html#getShowtimes">getShowtimes</a></li><li><a href="global.html#handleConfirm">handleConfirm</a></li><li><a href="global.html#handleDownloadPDF">handleDownloadPDF</a></li><li><a href="global.html#loadContent">loadContent</a></li><li><a href="global.html#logAPI">logAPI</a></li><li><a href="global.html#loginUser">loginUser</a></li><li><a href="global.html#minutesToHMM">minutesToHMM</a></li><li><a href="global.html#movieAPI">movieAPI</a></li><li><a href="global.html#register">register</a></li><li><a href="global.html#showtimeAPI">showtimeAPI</a></li><li><a href="global.html#theaterAPI">theaterAPI</a></li><li><a href="global.html#updateProfile">updateProfile</a></li><li><a href="global.html#useAuth">useAuth</a></li><li><a href="global.html#validateEmail">validateEmail</a></li><li><a href="global.html#validatePassword">validatePassword</a></li><li><a href="global.html#validateRating">validateRating</a></li><li><a href="global.html#validateUsername">validateUsername</a></li><li><a href="global.html#watchlistAPI">watchlistAPI</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-controllers_bookingController.html">controllers/bookingController</a></li><li><a href="module-hooks_useFilters.html">hooks/useFilters</a></li></ul><h3>Global</h3><ul><li><a href="global.html#ConfirmationPage">ConfirmationPage</a></li><li><a href="global.html#HomePage">HomePage</a></li><li><a href="global.html#LoginModal">LoginModal</a></li><li><a href="global.html#MovieCard">MovieCard</a></li><li><a href="global.html#SeatPicker">SeatPicker</a></li><li><a href="global.html#auth">auth</a></li><li><a href="global.html#authAPI">authAPI</a></li><li><a href="global.html#authenticateToken">authenticateToken</a></li><li><a href="global.html#checkAvailability">checkAvailability</a></li><li><a href="global.html#checkDatabaseConnection">checkDatabaseConnection</a></li><li><a href="global.html#classNames">classNames</a></li><li><a href="global.html#createMovie">createMovie</a></li><li><a href="global.html#createTheater">createTheater</a></li><li><a href="global.html#deleteMovie">deleteMovie</a></li><li><a href="global.html#genreAPI">genreAPI</a></li><li><a href="global.html#getAllMovies">getAllMovies</a></li><li><a href="global.html#getCities">getCities</a></li><li><a href="global.html#getLocalIpAddress">getLocalIpAddress</a></li><li><a href="global.html#getMovieById">getMovieById</a></li><li><a href="global.html#getMovieStats">getMovieStats</a></li><li><a href="global.html#getProfile">getProfile</a></li><li><a href="global.html#getRecommendedMovies">getRecommendedMovies</a></li><li><a href="global.html#getShowtimes">getShowtimes</a></li><li><a href="global.html#getTheaters">getTheaters</a></li><li><a href="global.html#handleDownloadPDF">handleDownloadPDF</a></li><li><a href="global.html#isAdmin">isAdmin</a></li><li><a href="global.html#logAPI">logAPI</a></li><li><a href="global.html#loginUser">loginUser</a></li><li><a href="global.html#minutesToHMM">minutesToHMM</a></li><li><a href="global.html#movieAPI">movieAPI</a></li><li><a href="global.html#register">register</a></li><li><a href="global.html#showtimeAPI">showtimeAPI</a></li><li><a href="global.html#theaterAPI">theaterAPI</a></li><li><a href="global.html#updateMovie">updateMovie</a></li><li><a href="global.html#updateProfile">updateProfile</a></li><li><a href="global.html#useAuth">useAuth</a></li><li><a href="global.html#validateEmail">validateEmail</a></li><li><a href="global.html#validatePassword">validatePassword</a></li><li><a href="global.html#validateRating">validateRating</a></li><li><a href="global.html#validateUsername">validateUsername</a></li><li><a href="global.html#watchlistAPI">watchlistAPI</a></li></ul>
     
 </nav>
 
@@ -49,56 +49,140 @@
 const prisma = new PrismaClient();
 
 /**
- * Отримує список сеансів на основі заданих фільтрів (фільм, дата, місто).
- * @async
- * @param {Object} req - Об'єкт запиту з query параметрами.
- * @param {Object} res - Об'єкт відповіді.
- * @returns {Promise&lt;void>} JSON масив сеансів.
+ * Отримує список усіх міст із локалізованими назвами.
  */
-const getShowtimes = async (req, res) => {
+const getCities = async (req, res) => {
     try {
-        const { movieId, date, cityId } = req.query;
-        const where = {};
+        const rawLang = Array.isArray(req.query.lang)
+            ? req.query.lang[0]
+            : req.query.lang;
 
-        if (movieId) where.movieId = parseInt(movieId);
-        if (cityId) {
-            where.hall = { theater: { cityId: parseInt(cityId) } };
-        }
+        const lang = rawLang === 'en' ? 'en' : 'uk';
 
-        if (date) {
-            const start = new Date(date);
-            start.setUTCHours(0, 0, 0, 0);
-            const end = new Date(date);
-            end.setUTCHours(23, 59, 59, 999);
-            where.startTime = { gte: start, lte: end };
-        }
-
-        const showtimes = await prisma.showtime.findMany({
-            where,
+        const cities = await prisma.city.findMany({
             include: {
-                movie: true,
-                hall: {
-                    include: {
-                        theater: true,
-                        seats: {
-                            orderBy: [
-                                { rowNum: 'asc' },
-                                { seatNum: 'asc' }
-                            ]
-                        }
-                    }
-                }
-            },
-            orderBy: { startTime: 'asc' }
+                translations: true
+            }
         });
 
-        res.json(showtimes);
+        // Схлопуємо переклади у пласке поле name
+        const localizedCities = cities.map(city => {
+            const trans = city.translations.find(t => t.language === lang) || city.translations[0];
+            const cleanCity = { ...city };
+            cleanCity.name = trans ? trans.name : 'Unknown City';
+            delete cleanCity.translations;
+            return cleanCity;
+        });
+
+        // Захист від кешування на рівні HTTP-заголовків Express
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+        res.json(localizedCities);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 };
 
-module.exports = { getShowtimes };</code></pre>
+/**
+ * Отримує список кінотеатрів із локалізованими назвами та адресами.
+ */
+const getTheaters = async (req, res) => {
+    try {
+        const { cityId } = req.query;
+        const rawLang = Array.isArray(req.query.lang)
+            ? req.query.lang[0]
+            : req.query.lang;
+
+        const lang = rawLang === 'en' ? 'en' : 'uk';
+
+        const where = {};
+        if (cityId) {
+            where.cityId = parseInt(cityId, 10);
+        }
+
+        const theaters = await prisma.theater.findMany({
+            where,
+            include: {
+                translations: true,
+                city: {
+                    include: {
+                        translations: true
+                    }
+                },
+                halls: true
+            }
+        });
+
+        // Локалізуємо назву кінотеатру, адресу та назву його міста
+        const localizedTheaters = theaters.map(theater => {
+            const theaterTrans = theater.translations.find(t => t.language === lang) || theater.translations[0];
+            const cityTrans = theater.city?.translations.find(t => t.language === lang) || theater.city?.translations[0];
+
+            const cleanTheater = JSON.parse(JSON.stringify(theater));
+
+            cleanTheater.name = theaterTrans ? theaterTrans.name : 'Cinema Theater';
+            cleanTheater.address = theaterTrans ? theaterTrans.address : '';
+
+            if (cleanTheater.city) {
+                cleanTheater.city.name = cityTrans ? cityTrans.name : 'City';
+                delete cleanTheater.city.translations;
+            }
+
+            delete cleanTheater.translations;
+            return cleanTheater;
+        });
+
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+        res.json(localizedTheaters);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+/**
+ * СТВОРЕННЯ КІНОТЕАТРУ (Адмін-функція)
+ */
+const createTheater = async (req, res) => {
+    try {
+        const { cityId, coords, phone, name, address } = req.body;
+
+        if (!cityId || !coords || !name) {
+            return res.status(400).json({ error: 'Обов’язкові поля відсутні.' });
+        }
+
+        const newTheater = await prisma.theater.create({
+            data: {
+                cityId: parseInt(cityId, 10),
+                coords,
+                phone,
+                translations: {
+                    create: [
+                        { language: 'uk', name, address },
+                        { language: 'en', name: name + ' (EN)', address: address ? address + ' (EN)' : '' }
+                    ]
+                }
+            },
+            include: { translations: true }
+        });
+
+        const trans = newTheater.translations.find(t => t.language === 'uk');
+        res.status(201).json({
+            id: newTheater.id,
+            cityId: newTheater.cityId,
+            coords: newTheater.coords,
+            phone: newTheater.phone,
+            name: trans.name,
+            address: trans.address
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+module.exports = {
+    getCities,
+    getTheaters,
+    createTheater
+};</code></pre>
         </article>
     </section>
 
@@ -112,7 +196,7 @@ module.exports = { getShowtimes };</code></pre>
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Mon May 18 2026 11:52:14 GMT+0000 (Coordinated Universal Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Tue May 26 2026 18:05:21 GMT+0000 (Coordinated Universal Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
 </footer>
 
 <script>prettyPrint();</script>

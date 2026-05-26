@@ -29,7 +29,7 @@
 <nav >
     
     
-    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-bookingController.html">bookingController</a></li><li><a href="module-hooks_useFilters.html">hooks/useFilters</a></li></ul><h3>Global</h3><ul><li><a href="global.html#BookingPage">BookingPage</a></li><li><a href="global.html#ConfirmationPage">ConfirmationPage</a></li><li><a href="global.html#HomePage">HomePage</a></li><li><a href="global.html#LoginModal">LoginModal</a></li><li><a href="global.html#MovieCard">MovieCard</a></li><li><a href="global.html#SeatPicker">SeatPicker</a></li><li><a href="global.html#TheatersPage">TheatersPage</a></li><li><a href="global.html#auth">auth</a></li><li><a href="global.html#authAPI">authAPI</a></li><li><a href="global.html#authenticateToken">authenticateToken</a></li><li><a href="global.html#checkAvailability">checkAvailability</a></li><li><a href="global.html#checkDatabaseConnection">checkDatabaseConnection</a></li><li><a href="global.html#classNames">classNames</a></li><li><a href="global.html#fetchCities">fetchCities</a></li><li><a href="global.html#fetchSeats">fetchSeats</a></li><li><a href="global.html#genreAPI">genreAPI</a></li><li><a href="global.html#getAllMovies">getAllMovies</a></li><li><a href="global.html#getMovieById">getMovieById</a></li><li><a href="global.html#getProfile">getProfile</a></li><li><a href="global.html#getRecommendedMovies">getRecommendedMovies</a></li><li><a href="global.html#getShowtimes">getShowtimes</a></li><li><a href="global.html#handleConfirm">handleConfirm</a></li><li><a href="global.html#handleDownloadPDF">handleDownloadPDF</a></li><li><a href="global.html#loadContent">loadContent</a></li><li><a href="global.html#logAPI">logAPI</a></li><li><a href="global.html#loginUser">loginUser</a></li><li><a href="global.html#minutesToHMM">minutesToHMM</a></li><li><a href="global.html#movieAPI">movieAPI</a></li><li><a href="global.html#register">register</a></li><li><a href="global.html#showtimeAPI">showtimeAPI</a></li><li><a href="global.html#theaterAPI">theaterAPI</a></li><li><a href="global.html#updateProfile">updateProfile</a></li><li><a href="global.html#useAuth">useAuth</a></li><li><a href="global.html#validateEmail">validateEmail</a></li><li><a href="global.html#validatePassword">validatePassword</a></li><li><a href="global.html#validateRating">validateRating</a></li><li><a href="global.html#validateUsername">validateUsername</a></li><li><a href="global.html#watchlistAPI">watchlistAPI</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-controllers_bookingController.html">controllers/bookingController</a></li><li><a href="module-hooks_useFilters.html">hooks/useFilters</a></li></ul><h3>Global</h3><ul><li><a href="global.html#ConfirmationPage">ConfirmationPage</a></li><li><a href="global.html#HomePage">HomePage</a></li><li><a href="global.html#LoginModal">LoginModal</a></li><li><a href="global.html#MovieCard">MovieCard</a></li><li><a href="global.html#SeatPicker">SeatPicker</a></li><li><a href="global.html#auth">auth</a></li><li><a href="global.html#authAPI">authAPI</a></li><li><a href="global.html#authenticateToken">authenticateToken</a></li><li><a href="global.html#checkAvailability">checkAvailability</a></li><li><a href="global.html#checkDatabaseConnection">checkDatabaseConnection</a></li><li><a href="global.html#classNames">classNames</a></li><li><a href="global.html#createMovie">createMovie</a></li><li><a href="global.html#createTheater">createTheater</a></li><li><a href="global.html#deleteMovie">deleteMovie</a></li><li><a href="global.html#genreAPI">genreAPI</a></li><li><a href="global.html#getAllMovies">getAllMovies</a></li><li><a href="global.html#getCities">getCities</a></li><li><a href="global.html#getLocalIpAddress">getLocalIpAddress</a></li><li><a href="global.html#getMovieById">getMovieById</a></li><li><a href="global.html#getMovieStats">getMovieStats</a></li><li><a href="global.html#getProfile">getProfile</a></li><li><a href="global.html#getRecommendedMovies">getRecommendedMovies</a></li><li><a href="global.html#getShowtimes">getShowtimes</a></li><li><a href="global.html#getTheaters">getTheaters</a></li><li><a href="global.html#handleDownloadPDF">handleDownloadPDF</a></li><li><a href="global.html#isAdmin">isAdmin</a></li><li><a href="global.html#logAPI">logAPI</a></li><li><a href="global.html#loginUser">loginUser</a></li><li><a href="global.html#minutesToHMM">minutesToHMM</a></li><li><a href="global.html#movieAPI">movieAPI</a></li><li><a href="global.html#register">register</a></li><li><a href="global.html#showtimeAPI">showtimeAPI</a></li><li><a href="global.html#theaterAPI">theaterAPI</a></li><li><a href="global.html#updateMovie">updateMovie</a></li><li><a href="global.html#updateProfile">updateProfile</a></li><li><a href="global.html#useAuth">useAuth</a></li><li><a href="global.html#validateEmail">validateEmail</a></li><li><a href="global.html#validatePassword">validatePassword</a></li><li><a href="global.html#validateRating">validateRating</a></li><li><a href="global.html#validateUsername">validateUsername</a></li><li><a href="global.html#watchlistAPI">watchlistAPI</a></li></ul>
     
 </nav>
 
@@ -61,46 +61,37 @@ import { LoadingState } from "../LoadingState.jsx";
 import { EmptyState } from "../../ui/EmptyState";
 
 import { logAPI } from "../../../services/api.js";
+// Імпортуємо наш хук, щоб сторінка працювала автономно
+import { useFilters } from "../../../hooks/useFilters";
 
 /**
- * Головна сторінка каталогу фільмів із слайдером та фільтрами.
+ * Головна сторінка каталогу фільмів із вбудованою автономною фільтрацією.
  * @component
- * @param {Object} props - Властивості компонента.
- * @param {string} props.query - Текст пошукового запиту.
- * @param {Function} props.setQuery - Функція оновлення пошуку.
- * @param {Array&lt;string>} props.selectedGenres - Обрані жанри.
- * @param {Function} props.setSelectedGenres - Функція оновлення жанрів.
- * @param {number} props.rating - Мінімальний рейтинг.
- * @param {Function} props.setRating - Функція оновлення рейтингу.
- * @param {string} props.time - Обраний час сеансів.
- * @param {Function} props.setTime - Функція оновлення часу.
- * @param {Array} props.genres - Список усіх доступних жанрів.
- * @param {Array} props.filtered - Список відфільтрованих фільмів.
- * @param {Array} props.movies - Повний список фільмів для слайдера.
- * @param {boolean} props.loading - Статус завантаження.
- * @param {Object|null} props.error - Об'єкт помилки.
- * @param {Function} props.onOpenMovie - Коллбек для відкриття модалки фільму.
- * @param {Function} props.onWatchTrailer - Коллбек для перегляду трейлера.
- * @param {Function} props.onRetry - Коллбек для повторного запиту при помилці.
- * @param {Array&lt;number>} props.watchlistIds - ID фільмів у списку бажаного.
- * @param {Function} props.onToggleWatchlist - Коллбек для перемикання списку бажаного.
- * @returns {JSX.Element} Головна сторінка з сіткою фільмів або станами завантаження/помилки.
  */
 export const HomePage = ({
-                             query, setQuery, selectedGenres, setSelectedGenres,
-                             rating, setRating, time, setTime,
-                             genres = [], filtered = [], movies = [],
-                             loading, error, onOpenMovie, onWatchTrailer,
-                             onRetry, watchlistIds, onToggleWatchlist
+                             genres = [],
+                             onOpenMovie,
+                             onWatchTrailer,
+                             watchlistIds,
+                             onToggleWatchlist
                          }) => {
     const { t } = useTranslation();
+
+    const {
+        query, setQuery,
+        selectedGenres, setSelectedGenres,
+        duration, setDuration,
+        movies, filtered,
+        loading, error
+    } = useFilters();
+
     const promoItems = movies.slice(0, 5);
 
+    // Функція скидання фільтрів
     const resetFilters = () => {
         setQuery("");
         setSelectedGenres([]);
-        setRating(0);
-        setTime("any");
+        setDuration("any");
     };
 
     if (error) {
@@ -108,16 +99,14 @@ export const HomePage = ({
         return (
             &lt;ErrorState
                 type={errorType}
-                onRetry={onRetry}
+                onRetry={() => window.location.reload()}
                 onReport={() => {
-                    // 1. Лог у Better Stack
                     logAPI.sendError("Користувач повідомив про проблему на сторінці Каталогу", {
                         page: "HomePage",
                         errorType: errorType,
                         action: "User clicked report button"
                     });
 
-                    // 2. Форма Sentry
                     const eventId = Sentry.captureMessage("User Feedback: Issue on HomePage");
 
                     Sentry.showReportDialog({
@@ -139,7 +128,7 @@ export const HomePage = ({
 
     return (
         &lt;div className="space-y-10 pb-20">
-            {/* 1. СЛАЙДЕР */}
+            {/* 1. СЛАЙДЕР СВІЖИХ ПРЕМ'ЄР */}
             {!loading &amp;&amp; promoItems.length > 0 &amp;&amp; (
                 &lt;Slider items={promoItems} onWatchTrailer={onWatchTrailer} />
             )}
@@ -150,20 +139,18 @@ export const HomePage = ({
                     genres={genres}
                     selectedGenres={selectedGenres}
                     setSelectedGenres={setSelectedGenres}
-                    rating={rating}
-                    setRating={setRating}
-                    time={time}
-                    setTime={setTime}
+                    duration={duration}
+                    setDuration={setDuration}
                     query={query}
                     setQuery={setQuery}
                 />
             &lt;/div>
 
             &lt;section className="space-y-8">
-                {/* 3. ЗАГОЛОВОК КАТАЛОГУ */}
+                {/* 3. ДИНАМІЧНИЙ ЗАГОЛОВОК КАТАЛОГУ */}
                 &lt;CatalogHeader loading={loading} count={filtered.length} />
 
-                {/* 4. ОСНОВНИЙ КОНТЕНТ */}
+                {/* 4. СІТКА ФІЛЬМІВ АБО СТАН ПОРОЖНЕЧІ */}
                 {loading ? (
                     &lt;LoadingState label={t('home.sync')} />
                 ) : filtered.length > 0 ? (
@@ -200,7 +187,7 @@ export const HomePage = ({
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Mon May 18 2026 11:52:14 GMT+0000 (Coordinated Universal Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Tue May 26 2026 18:05:21 GMT+0000 (Coordinated Universal Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
 </footer>
 
 <script>prettyPrint();</script>

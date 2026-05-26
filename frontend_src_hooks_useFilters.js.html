@@ -29,7 +29,7 @@
 <nav >
     
     
-    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-bookingController.html">bookingController</a></li><li><a href="module-hooks_useFilters.html">hooks/useFilters</a></li></ul><h3>Global</h3><ul><li><a href="global.html#BookingPage">BookingPage</a></li><li><a href="global.html#ConfirmationPage">ConfirmationPage</a></li><li><a href="global.html#HomePage">HomePage</a></li><li><a href="global.html#LoginModal">LoginModal</a></li><li><a href="global.html#MovieCard">MovieCard</a></li><li><a href="global.html#SeatPicker">SeatPicker</a></li><li><a href="global.html#TheatersPage">TheatersPage</a></li><li><a href="global.html#auth">auth</a></li><li><a href="global.html#authAPI">authAPI</a></li><li><a href="global.html#authenticateToken">authenticateToken</a></li><li><a href="global.html#checkAvailability">checkAvailability</a></li><li><a href="global.html#checkDatabaseConnection">checkDatabaseConnection</a></li><li><a href="global.html#classNames">classNames</a></li><li><a href="global.html#fetchCities">fetchCities</a></li><li><a href="global.html#fetchSeats">fetchSeats</a></li><li><a href="global.html#genreAPI">genreAPI</a></li><li><a href="global.html#getAllMovies">getAllMovies</a></li><li><a href="global.html#getMovieById">getMovieById</a></li><li><a href="global.html#getProfile">getProfile</a></li><li><a href="global.html#getRecommendedMovies">getRecommendedMovies</a></li><li><a href="global.html#getShowtimes">getShowtimes</a></li><li><a href="global.html#handleConfirm">handleConfirm</a></li><li><a href="global.html#handleDownloadPDF">handleDownloadPDF</a></li><li><a href="global.html#loadContent">loadContent</a></li><li><a href="global.html#logAPI">logAPI</a></li><li><a href="global.html#loginUser">loginUser</a></li><li><a href="global.html#minutesToHMM">minutesToHMM</a></li><li><a href="global.html#movieAPI">movieAPI</a></li><li><a href="global.html#register">register</a></li><li><a href="global.html#showtimeAPI">showtimeAPI</a></li><li><a href="global.html#theaterAPI">theaterAPI</a></li><li><a href="global.html#updateProfile">updateProfile</a></li><li><a href="global.html#useAuth">useAuth</a></li><li><a href="global.html#validateEmail">validateEmail</a></li><li><a href="global.html#validatePassword">validatePassword</a></li><li><a href="global.html#validateRating">validateRating</a></li><li><a href="global.html#validateUsername">validateUsername</a></li><li><a href="global.html#watchlistAPI">watchlistAPI</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-controllers_bookingController.html">controllers/bookingController</a></li><li><a href="module-hooks_useFilters.html">hooks/useFilters</a></li></ul><h3>Global</h3><ul><li><a href="global.html#ConfirmationPage">ConfirmationPage</a></li><li><a href="global.html#HomePage">HomePage</a></li><li><a href="global.html#LoginModal">LoginModal</a></li><li><a href="global.html#MovieCard">MovieCard</a></li><li><a href="global.html#SeatPicker">SeatPicker</a></li><li><a href="global.html#auth">auth</a></li><li><a href="global.html#authAPI">authAPI</a></li><li><a href="global.html#authenticateToken">authenticateToken</a></li><li><a href="global.html#checkAvailability">checkAvailability</a></li><li><a href="global.html#checkDatabaseConnection">checkDatabaseConnection</a></li><li><a href="global.html#classNames">classNames</a></li><li><a href="global.html#createMovie">createMovie</a></li><li><a href="global.html#createTheater">createTheater</a></li><li><a href="global.html#deleteMovie">deleteMovie</a></li><li><a href="global.html#genreAPI">genreAPI</a></li><li><a href="global.html#getAllMovies">getAllMovies</a></li><li><a href="global.html#getCities">getCities</a></li><li><a href="global.html#getLocalIpAddress">getLocalIpAddress</a></li><li><a href="global.html#getMovieById">getMovieById</a></li><li><a href="global.html#getMovieStats">getMovieStats</a></li><li><a href="global.html#getProfile">getProfile</a></li><li><a href="global.html#getRecommendedMovies">getRecommendedMovies</a></li><li><a href="global.html#getShowtimes">getShowtimes</a></li><li><a href="global.html#getTheaters">getTheaters</a></li><li><a href="global.html#handleDownloadPDF">handleDownloadPDF</a></li><li><a href="global.html#isAdmin">isAdmin</a></li><li><a href="global.html#logAPI">logAPI</a></li><li><a href="global.html#loginUser">loginUser</a></li><li><a href="global.html#minutesToHMM">minutesToHMM</a></li><li><a href="global.html#movieAPI">movieAPI</a></li><li><a href="global.html#register">register</a></li><li><a href="global.html#showtimeAPI">showtimeAPI</a></li><li><a href="global.html#theaterAPI">theaterAPI</a></li><li><a href="global.html#updateMovie">updateMovie</a></li><li><a href="global.html#updateProfile">updateProfile</a></li><li><a href="global.html#useAuth">useAuth</a></li><li><a href="global.html#validateEmail">validateEmail</a></li><li><a href="global.html#validatePassword">validatePassword</a></li><li><a href="global.html#validateRating">validateRating</a></li><li><a href="global.html#validateUsername">validateUsername</a></li><li><a href="global.html#watchlistAPI">watchlistAPI</a></li></ul>
     
 </nav>
 
@@ -46,41 +46,33 @@
     <section>
         <article>
             <pre class="prettyprint source linenums"><code>import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { movieAPI } from "../services/api";
 
 /**
  * @module hooks/useFilters
- * @description
- * ### АРХІТЕКТУРНЕ РІШЕННЯ (100%):
- * Використано патерн **Client-Side Filtering** (фільтрація на стороні клієнта).
- * - **Обґрунтування**: Оскільки каталог фільмів у межах одного кінотеатру зазвичай не перевищує кілька сотень записів, завантаження повного списку один раз із наступною локальною фільтрацією забезпечує миттєвий (0ms латентність) відгук інтерфейсу на дії користувача.
- *
- * ### ВЗАЄМОДІЯ КОМПОНЕНТІВ:
- * Хук виступає "джерелом істини" для `MoviesGrid`, `FiltersBar` та `SearchInput`, забезпечуючи синхронізацію фільтрів між різними частинами UI.
+ * @description Клієнтська багатофакторна фільтрація каталогу фільмів із реактивним оновленням локалі 3NF.
  */
 export const useFilters = () => {
+    const { t, i18n } = useTranslation();
     const [query, setQuery] = useState("");
     const [selectedGenres, setSelectedGenres] = useState([]);
-    const [rating, setRating] = useState(0);
-    const [time, setTime] = useState("any");
+    const [duration, setDuration] = useState("any");
     const [movies, setMovies] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        /**
-         * ВЗАЄМОДІЯ: Отримання первинних даних.
-         * @async
-         */
         const fetchMovies = async () => {
             try {
                 setLoading(true);
                 setError(null);
+
                 const response = await movieAPI.getAll();
                 const moviesData = response.data.movies || response.data;
                 setMovies(moviesData);
             } catch (err) {
-                setError('Помилка завантаження фільмів');
+                setError(t('errors.default_message'));
                 console.error('Error fetching movies:', err);
                 setMovies([]);
             } finally {
@@ -88,45 +80,46 @@ export const useFilters = () => {
             }
         };
         fetchMovies();
-    }, []);
+    }, [i18n.language, t]);
 
     /**
-     * ### ВАЖКИЙ АЛГОРИТМ: Багатофакторний предикат фільтрації.
-     * Виконує послідовну перевірку за трьома незалежними критеріями:
-     * 1. **Text Search**: Нечутливий до регістру пошук за назвою або режисером.
-     * 2. **Genre Intersection**: Використовує логіку "AND" (фільм має мати ВСІ обрані жанри).
-     * 3. **Rating Threshold**: Порівнює числове значення рейтингу.
-     * * Алгоритмічна складність: $O(n \times m)$, де $n$ — кількість фільмів, $m$ — кількість обраних жанрів.
-     * * @type {Array&lt;Object>}
+     * Препроцесинг та багатофакторна фільтрація масиву фільмів
      */
     const filtered = movies.filter(movie => {
+        // 1. Текстовий пошук за назвою або режисером
         const matchesQuery = !query ||
-            movie.title.toLowerCase().includes(query.toLowerCase()) ||
+            movie.title?.toLowerCase().includes(query.toLowerCase()) ||
             (movie.director &amp;&amp; movie.director.toLowerCase().includes(query.toLowerCase()));
 
-        /**
-         * БІЗНЕС-ЛОГІКА: Строга відповідність жанрам.
-         * Користувач має бачити лише ті фільми, які відповідають УСІМ обраним категоріям одночасно.
-         */
+        // 2. Строгий перетин жанрів
         const matchesGenres = selectedGenres.length === 0 ||
             selectedGenres.every(genre =>
                 movie.genres?.some(g => {
-                    const genreName = g.genre?.name || g;
-                    return genreName.toLowerCase().includes(genre.toLowerCase());
+                    const genreName = g.genre?.name || g.name || g;
+                    return typeof genreName === 'string' &amp;&amp; genreName.toLowerCase() === genre.toLowerCase();
                 })
             );
 
-        // 3. Порівняння мінімального рейтингу
-        const matchesRating = !rating || (movie.rating &amp;&amp; movie.rating >= rating);
+        // 3. Фільтрація за тривалістю
+        let matchesDuration = true;
+        const movieDurationRaw = movie.durationMin || movie.duration;
 
-        return matchesQuery &amp;&amp; matchesGenres &amp;&amp; matchesRating;
+        if (duration !== "any" &amp;&amp; movieDurationRaw) {
+            const mins = parseInt(movieDurationRaw, 10);
+            if (!isNaN(mins)) {
+                if (duration === "short") matchesDuration = mins &lt;= 90;
+                else if (duration === "medium") matchesDuration = mins > 90 &amp;&amp; mins &lt;= 130;
+                else if (duration === "long") matchesDuration = mins > 130;
+            }
+        }
+
+        return matchesQuery &amp;&amp; matchesGenres &amp;&amp; matchesDuration;
     });
 
     return {
         query, setQuery,
         selectedGenres, setSelectedGenres,
-        rating, setRating,
-        time, setTime,
+        duration, setDuration,
         movies,
         filtered,
         loading,
@@ -146,7 +139,7 @@ export const useFilters = () => {
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Mon May 18 2026 11:52:14 GMT+0000 (Coordinated Universal Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Tue May 26 2026 18:05:21 GMT+0000 (Coordinated Universal Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
 </footer>
 
 <script>prettyPrint();</script>

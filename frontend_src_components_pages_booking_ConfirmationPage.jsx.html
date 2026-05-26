@@ -29,7 +29,7 @@
 <nav >
     
     
-    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-bookingController.html">bookingController</a></li><li><a href="module-hooks_useFilters.html">hooks/useFilters</a></li></ul><h3>Global</h3><ul><li><a href="global.html#BookingPage">BookingPage</a></li><li><a href="global.html#ConfirmationPage">ConfirmationPage</a></li><li><a href="global.html#HomePage">HomePage</a></li><li><a href="global.html#LoginModal">LoginModal</a></li><li><a href="global.html#MovieCard">MovieCard</a></li><li><a href="global.html#SeatPicker">SeatPicker</a></li><li><a href="global.html#TheatersPage">TheatersPage</a></li><li><a href="global.html#auth">auth</a></li><li><a href="global.html#authAPI">authAPI</a></li><li><a href="global.html#authenticateToken">authenticateToken</a></li><li><a href="global.html#checkAvailability">checkAvailability</a></li><li><a href="global.html#checkDatabaseConnection">checkDatabaseConnection</a></li><li><a href="global.html#classNames">classNames</a></li><li><a href="global.html#fetchCities">fetchCities</a></li><li><a href="global.html#fetchSeats">fetchSeats</a></li><li><a href="global.html#genreAPI">genreAPI</a></li><li><a href="global.html#getAllMovies">getAllMovies</a></li><li><a href="global.html#getMovieById">getMovieById</a></li><li><a href="global.html#getProfile">getProfile</a></li><li><a href="global.html#getRecommendedMovies">getRecommendedMovies</a></li><li><a href="global.html#getShowtimes">getShowtimes</a></li><li><a href="global.html#handleConfirm">handleConfirm</a></li><li><a href="global.html#handleDownloadPDF">handleDownloadPDF</a></li><li><a href="global.html#loadContent">loadContent</a></li><li><a href="global.html#logAPI">logAPI</a></li><li><a href="global.html#loginUser">loginUser</a></li><li><a href="global.html#minutesToHMM">minutesToHMM</a></li><li><a href="global.html#movieAPI">movieAPI</a></li><li><a href="global.html#register">register</a></li><li><a href="global.html#showtimeAPI">showtimeAPI</a></li><li><a href="global.html#theaterAPI">theaterAPI</a></li><li><a href="global.html#updateProfile">updateProfile</a></li><li><a href="global.html#useAuth">useAuth</a></li><li><a href="global.html#validateEmail">validateEmail</a></li><li><a href="global.html#validatePassword">validatePassword</a></li><li><a href="global.html#validateRating">validateRating</a></li><li><a href="global.html#validateUsername">validateUsername</a></li><li><a href="global.html#watchlistAPI">watchlistAPI</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-controllers_bookingController.html">controllers/bookingController</a></li><li><a href="module-hooks_useFilters.html">hooks/useFilters</a></li></ul><h3>Global</h3><ul><li><a href="global.html#ConfirmationPage">ConfirmationPage</a></li><li><a href="global.html#HomePage">HomePage</a></li><li><a href="global.html#LoginModal">LoginModal</a></li><li><a href="global.html#MovieCard">MovieCard</a></li><li><a href="global.html#SeatPicker">SeatPicker</a></li><li><a href="global.html#auth">auth</a></li><li><a href="global.html#authAPI">authAPI</a></li><li><a href="global.html#authenticateToken">authenticateToken</a></li><li><a href="global.html#checkAvailability">checkAvailability</a></li><li><a href="global.html#checkDatabaseConnection">checkDatabaseConnection</a></li><li><a href="global.html#classNames">classNames</a></li><li><a href="global.html#createMovie">createMovie</a></li><li><a href="global.html#createTheater">createTheater</a></li><li><a href="global.html#deleteMovie">deleteMovie</a></li><li><a href="global.html#genreAPI">genreAPI</a></li><li><a href="global.html#getAllMovies">getAllMovies</a></li><li><a href="global.html#getCities">getCities</a></li><li><a href="global.html#getLocalIpAddress">getLocalIpAddress</a></li><li><a href="global.html#getMovieById">getMovieById</a></li><li><a href="global.html#getMovieStats">getMovieStats</a></li><li><a href="global.html#getProfile">getProfile</a></li><li><a href="global.html#getRecommendedMovies">getRecommendedMovies</a></li><li><a href="global.html#getShowtimes">getShowtimes</a></li><li><a href="global.html#getTheaters">getTheaters</a></li><li><a href="global.html#handleDownloadPDF">handleDownloadPDF</a></li><li><a href="global.html#isAdmin">isAdmin</a></li><li><a href="global.html#logAPI">logAPI</a></li><li><a href="global.html#loginUser">loginUser</a></li><li><a href="global.html#minutesToHMM">minutesToHMM</a></li><li><a href="global.html#movieAPI">movieAPI</a></li><li><a href="global.html#register">register</a></li><li><a href="global.html#showtimeAPI">showtimeAPI</a></li><li><a href="global.html#theaterAPI">theaterAPI</a></li><li><a href="global.html#updateMovie">updateMovie</a></li><li><a href="global.html#updateProfile">updateProfile</a></li><li><a href="global.html#useAuth">useAuth</a></li><li><a href="global.html#validateEmail">validateEmail</a></li><li><a href="global.html#validatePassword">validatePassword</a></li><li><a href="global.html#validateRating">validateRating</a></li><li><a href="global.html#validateUsername">validateUsername</a></li><li><a href="global.html#watchlistAPI">watchlistAPI</a></li></ul>
     
 </nav>
 
@@ -62,7 +62,7 @@ import { SuccessBadge } from "./SuccessBadge";
  * @returns {JSX.Element} Екран фіналізації замовлення.
  */
 export const ConfirmationPage = ({ setStep, bookingId }) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const [isDownloading, setIsDownloading] = useState(false);
 
     /**
@@ -85,7 +85,9 @@ export const ConfirmationPage = ({ setStep, bookingId }) => {
             setIsDownloading(true);
             const token = localStorage.getItem('authToken');
 
-            const response = await fetch(`http://localhost:5000/api/bookings/${currentBookingId}/pdf`, {
+            const currentLang = i18n.language || 'uk';
+
+            const response = await fetch(`http://localhost:5000/api/bookings/${currentBookingId}/pdf?lang=${currentLang}`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -178,7 +180,7 @@ export const ConfirmationPage = ({ setStep, bookingId }) => {
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Mon May 18 2026 11:52:14 GMT+0000 (Coordinated Universal Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.5</a> on Tue May 26 2026 18:05:21 GMT+0000 (Coordinated Universal Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
 </footer>
 
 <script>prettyPrint();</script>
